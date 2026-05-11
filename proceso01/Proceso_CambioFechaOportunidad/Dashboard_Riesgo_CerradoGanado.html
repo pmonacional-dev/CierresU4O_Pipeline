@@ -1,0 +1,1672 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Riesgo en Ejecucion - Proyectos Cerrados Ganados</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { height: 100%; overflow: hidden; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0a1420; color: #e0e6ed; display: flex; flex-direction: column; }
+
+        .header { background: linear-gradient(135deg, #1a2332 0%, #243447 100%); padding: 12px 24px; border-bottom: 2px solid #2d4a5e; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+        .header h1 { font-size: 18px; font-weight: 600; color: #fff; }
+        .header .subtitle { font-size: 12px; color: #7a8fa6; margin-top: 2px; }
+        .header .badges { display: flex; gap: 8px; }
+        .header .date-badge { background: #2d4a5e; padding: 4px 12px; border-radius: 6px; font-size: 11px; color: #a0b4c8; }
+
+        .dashboard-layout { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .top-kpis { flex-shrink: 0; padding: 10px 24px; background: #18242f; border-bottom: 2px solid #243447; }
+        .bottom-panels { flex: 1; display: flex; overflow: hidden; min-height: 0; }
+        .panel-left { width: 50%; padding: 0 8px 12px 24px; overflow-y: auto; }
+        .panel-right { width: 50%; padding: 0 24px 12px 8px; overflow-y: auto; border-left: 1px solid #1e2d3d; }
+        .panel-left::-webkit-scrollbar, .panel-right::-webkit-scrollbar { width: 5px; }
+        .panel-left::-webkit-scrollbar-track, .panel-right::-webkit-scrollbar-track { background: #0a1420; }
+        .panel-left::-webkit-scrollbar-thumb, .panel-right::-webkit-scrollbar-thumb { background: #2d4a5e; border-radius: 3px; }
+        .panel-left::-webkit-scrollbar-thumb:hover, .panel-right::-webkit-scrollbar-thumb:hover { background: #5b9bd5; }
+
+        /* KPI Cards */
+        .kpi-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 8px; }
+        .kpi-row-asert { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 10px; }
+        .kpi-card { background: #1f2d3d; border-radius: 8px; padding: 14px 16px; border: 1px solid #2a3a4e; position: relative; overflow: hidden; }
+        .kpi-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+        .kpi-card.blue::before { background: #5b9bd5; }
+        .kpi-card.red::before { background: #c44e4e; }
+        .kpi-card.yellow::before { background: #c48a4a; }
+        .kpi-card.green::before { background: #4a9982; }
+        .kpi-card.purple::before { background: #6f7d99; }
+        .kpi-card.white::before { background: #ffffff; }
+        .kpi-value { font-size: 26px; font-weight: 700; margin-bottom: 4px; }
+        .kpi-card.blue .kpi-value { color: #5b9bd5; }
+        .kpi-card.red .kpi-value { color: #c44e4e; }
+        .kpi-card.yellow .kpi-value { color: #c48a4a; }
+        .kpi-card.green .kpi-value { color: #4a9982; }
+        .kpi-card.purple .kpi-value { color: #6f7d99; }
+        .kpi-card.white .kpi-value { color: #ffffff; }
+        .kpi-label { font-size: 12px; color: #e0e6ed; text-transform: uppercase; letter-spacing: 0.5px; }
+        .kpi-detail { font-size: 11px; color: #e0e6ed; margin-top: 8px; }
+        .kpi-importe { font-size: 14px; font-weight: 600; margin-top: 4px; }
+        .kpi-card.red .kpi-importe { color: #d47272; }
+        .kpi-card.yellow .kpi-importe { color: #d6a472; }
+        .kpi-card.blue .kpi-importe { color: #7fb4dc; }
+        .kpi-card.green .kpi-importe { color: #6fb59c; }
+        .kpi-card.purple .kpi-importe { color: #9aa8c0; }
+        .kpi-card.white .kpi-importe { color: #e5e7eb; }
+        .kpi-card.selected-card { outline: 3px solid #5b9bd5; outline-offset: -3px; box-shadow: 0 0 14px rgba(91,155,213,0.55); position: relative; z-index: 2; }
+        /* Fila compacta de KPIs inferiores (Sin Cambios / Bajo / Medio / Alto / Total / Movieron) */
+        /* Layout horizontal: valor grande a la izquierda, label+importe stacked a la derecha */
+        .kpi-row-compact .kpi-card { padding: 4px 10px !important; display: grid !important; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: 8px; row-gap: 0; align-items: center !important; justify-content: start !important; text-align: left !important; }
+        .kpi-row-compact .kpi-value { grid-column: 1; grid-row: 1 / span 2; font-size: 22px !important; margin: 0 !important; line-height: 1; align-self: center; font-weight: 700; }
+        .kpi-row-compact .kpi-label { grid-column: 2; grid-row: 1; font-size: 9px !important; letter-spacing: 0.4px; margin: 0 !important; text-align: left; }
+        .kpi-row-compact .kpi-importe { grid-column: 2; grid-row: 2; font-size: 11px !important; margin: 0 !important; text-align: left; }
+        .kpi-row-compact .kpi-detail { grid-column: 2; grid-row: 3; font-size: 9px !important; margin: 0 !important; text-align: left; }
+        /* Agrupaciones de KPIs con títulos */
+        .kpi-row-compact { align-items: stretch; }
+        .kpi-group { display: flex; flex-direction: column; gap: 3px; }
+        .kpi-group-title { font-size: 9px; font-weight: 700; color: #8fa6c0; text-transform: uppercase; letter-spacing: 1px; padding: 2px 4px 0; border-left: 3px solid #5b9bd5; padding-left: 8px; line-height: 1.15; flex: 0 0 auto; }
+        .kpi-group.group-asertividad .kpi-group-title { border-left-color: #c48a4a; color: #c48a4a; }
+        .kpi-group.group-resumen .kpi-group-title { border-left-color: #5b9bd5; color: #7fb4dc; }
+        .kpi-group-cards { display: grid; gap: 6px; flex: 1 1 auto; grid-auto-rows: 1fr; }
+        .kpi-group-cards .kpi-card { height: 100%; }
+        /* Filtros por categoría de días (Lag venta / Días movimiento) */
+        .bucket-filters { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 4px; }
+        .bucket-filter { background: #1f2d3d; border: 1px solid #2a3a4e; border-radius: 6px; padding: 6px 12px; display: flex; align-items: center; gap: 10px; }
+        .bucket-filter-title { font-size: 9px; font-weight: 700; color: #8fa6c0; text-transform: uppercase; letter-spacing: 0.8px; flex: 0 1 auto; line-height: 1.25; max-width: 90px; }
+        .bucket-chips { display: flex; gap: 4px; flex: 1 1 auto; justify-content: flex-end; }
+        .bucket-chip { cursor: pointer; padding: 4px 10px; border-radius: 8px; border: 1px solid #2a3a4e; background: #0a1420; transition: all .15s; display: flex; flex-direction: column; align-items: center; gap: 1px; min-width: 54px; }
+        .bucket-chip .chip-label { font-size: 10px; font-weight: 600; color: #a0b4c8; letter-spacing: 0.3px; line-height: 1.1; }
+        .bucket-chip .chip-count { font-size: 13px; font-weight: 700; color: #e0e6ed; line-height: 1; }
+        .bucket-chip .chip-imp { font-size: 9px; color: #7a8fa6; font-family: ui-monospace, monospace; line-height: 1; }
+        .bucket-chip:hover { border-color: #5b9bd5; }
+        .bucket-chip:hover .chip-label, .bucket-chip:hover .chip-count { color: #7fb4dc; }
+        .bucket-chip.selected { background: #5b9bd5; border-color: #5b9bd5; box-shadow: 0 0 8px rgba(91,155,213,0.55); }
+        .bucket-chip.selected .chip-label, .bucket-chip.selected .chip-count, .bucket-chip.selected .chip-imp { color: #fff; }
+
+        /* Section title */
+        .section-title { font-size: 12px; font-weight: 600; color: #e0e6ed; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; margin-top: 4px; }
+
+        /* Main layout */
+        .main-grid { display: grid; grid-template-columns: 340px 1fr; gap: 16px; margin-bottom: 10px; }
+
+        /* Panels */
+        .panel { background: #1f2d3d; border-radius: 10px; border: 1px solid #2a3a4e; overflow: hidden; }
+        .panel-header { padding: 10px 16px; border-bottom: 1px solid #2a3a4e; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #a0b4c8; }
+        .panel-body { padding: 12px; height: calc(100% - 38px); }
+
+        /* Risk Matrix */
+        .risk-matrix { display: grid; grid-template-columns: 30px 1fr 1fr; grid-template-rows: 30px 1fr 1fr; gap: 6px; height: 100%; }
+        .matrix-corner { background: transparent; }
+        .matrix-col-header { text-align: center; font-size: 11px; font-weight: 600; color: #e0e6ed; text-transform: uppercase; display: flex; align-items: center; justify-content: center; }
+        .matrix-row-header { display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: #e0e6ed; text-transform: uppercase; writing-mode: vertical-rl; transform: rotate(180deg); }
+        .matrix-cell { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 14px 10px; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
+        .matrix-cell:hover { transform: scale(1.03); }
+        .matrix-cell.selected { outline: 3px solid #5b9bd5; outline-offset: -3px; box-shadow: 0 0 14px rgba(91,155,213,0.55); position: relative; z-index: 2; }
+        .matrix-cell.alto { background: #b91c1c; border: none; }
+        .matrix-cell.medio { background: #92400e; border: none; }
+        .matrix-cell.nulo { background: rgba(55, 65, 81, 0.5); border: none; }
+        .matrix-cell.ok { background: #047857; border: none; }
+        .matrix-cell .cell-count { font-size: 28px; font-weight: 700; color: #fff; }
+        .matrix-cell.nulo .cell-count { color: #9ca3af; }
+        .matrix-cell .cell-label { font-size: 10px; color: rgba(255,255,255,0.7); margin-top: 4px; text-transform: uppercase; }
+        .matrix-cell.nulo .cell-label { color: #7a8fa6; }
+        .matrix-cell .cell-importe { font-size: 11px; font-weight: 600; margin-top: 6px; color: rgba(255,255,255,0.85); }
+        .matrix-cell.nulo .cell-importe { color: #7a8fa6; }
+
+        /* Asertividad bars */
+        .asert-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 24px; }
+        .asert-card { background: #1f2d3d; border-radius: 10px; padding: 18px; border: 1px solid #2a3a4e; text-align: center; position: relative; overflow: hidden; }
+        .asert-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+        .asert-card.a-bajo::before { background: #4a9982; }
+        .asert-card.a-medio::before { background: #c48a4a; }
+        .asert-card.a-alto::before { background: #c44e4e; }
+        .asert-count { font-size: 28px; font-weight: 700; }
+        .asert-card.a-bajo .asert-count { color: #4a9982; }
+        .asert-card.a-medio .asert-count { color: #c48a4a; }
+        .asert-card.a-alto .asert-count { color: #c44e4e; }
+        .asert-range { font-size: 13px; font-weight: 600; color: #e0e6ed; margin-top: 4px; }
+        .asert-label { font-size: 11px; color: #7a8fa6; margin-top: 4px; }
+        .asert-imp { font-size: 13px; font-weight: 600; margin-top: 8px; }
+        .asert-card.a-bajo .asert-imp { color: #6fb59c; }
+        .asert-card.a-medio .asert-imp { color: #d6a472; }
+        .asert-card.a-alto .asert-imp { color: #d47272; }
+
+        /* Table */
+        .table-controls { display: flex; gap: 10px; padding: 14px 20px; border-bottom: 1px solid #2d4a5e; align-items: center; flex-wrap: wrap; }
+        .filter-btn { padding: 5px 14px; border-radius: 6px; border: 1px solid #2a3a4e; background: transparent; color: #7a8fa6; font-size: 12px; cursor: pointer; transition: all 0.2s; }
+        .filter-btn:hover, .filter-btn.active { background: #2a3a4e; color: #fff; }
+        .filter-btn.active-red { background: rgba(196, 78, 78,0.16); border-color: #c44e4e; color: #c44e4e; }
+        .filter-btn.active-yellow { background: rgba(196, 138, 74,0.16); border-color: #c48a4a; color: #c48a4a; }
+        .filter-btn.active-green { background: rgba(74, 153, 130,0.16); border-color: #4a9982; color: #4a9982; }
+        .table-summary { margin-left: auto; font-size: 11px; color: #556778; display: flex; gap: 16px; }
+
+        .data-table { width: 100%; border-collapse: collapse; }
+        .data-table thead th { padding: 10px 10px; text-align: left; font-size: 10px; font-weight: 600; color: #7a8fa6; text-transform: uppercase; border-bottom: 1px solid #2d4a5e; position: sticky; top: 0; background: #1b2836; cursor: pointer; white-space: nowrap; }
+        .data-table thead th:hover { color: #a0b4c8; }
+        .data-table tbody td { padding: 8px 10px; font-size: 12px; border-bottom: 1px solid #1e2d3d; white-space: nowrap; }
+        .data-table tbody tr:hover { background: rgba(91, 155, 213,0.05); }
+        .table-scroll { max-height: 420px; overflow-y: auto; }
+
+        .badge { padding: 3px 10px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+        .badge-alto { background: rgba(196, 78, 78,0.16); color: #c44e4e; }
+        .badge-medio { background: rgba(196, 138, 74,0.16); color: #c48a4a; }
+        .badge-nulo { background: rgba(107, 114, 128, 0.16); color: #6b7280; }
+        .badge-abajo { background: rgba(74, 153, 130,0.16); color: #4a9982; }
+        .badge-amedio { background: rgba(196, 138, 74,0.16); color: #c48a4a; }
+        .badge-aalto { background: rgba(196, 78, 78,0.16); color: #c44e4e; }
+        .badge-sinc { background: rgba(55, 65, 81, 0.3); color: #6b7280; }
+        .badge-si { color: #4a9982; }
+        .badge-no { color: #c44e4e; }
+
+        .change-bar { display: inline-block; height: 6px; border-radius: 3px; background: #5b9bd5; min-width: 4px; }
+        .days-val { font-weight: 600; }
+        .days-val.positive { color: #c44e4e; }
+        .days-val.negative { color: #5b9bd5; }
+        .days-val.zero { color: #6b7280; }
+        .importe-val { font-family: 'Segoe UI', monospace; text-align: right; }
+
+        /* Zona bar */
+        .zona-bar { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
+        .zona-btn { background: #1f2d3d; border: 1px solid #2a3a4e; border-radius: 6px; padding: 6px 12px; cursor: pointer; transition: all 0.2s; text-align: center; min-width: 100px; flex: 1; }
+        .zona-btn:hover { border-color: #5b9bd5; }
+        .zona-btn.zona-active { border-color: #5b9bd5; background: rgba(91, 155, 213,0.15); outline: 3px solid #5b9bd5; outline-offset: -3px; box-shadow: 0 0 14px rgba(91,155,213,0.55); position: relative; z-index: 2; }
+        .asesor-card.is-selected { outline: 3px solid #5b9bd5; outline-offset: -3px; box-shadow: 0 0 14px rgba(91,155,213,0.55); position: relative; z-index: 2; }
+        /* Barra de filtros activos */
+        .active-filters-bar { display:flex; align-items:center; flex-wrap:wrap; gap:6px; padding:6px 10px; margin-bottom:8px; background:linear-gradient(90deg, rgba(91,155,213,0.08), rgba(91,155,213,0.02)); border:1px solid rgba(91,155,213,0.35); border-radius:8px; font-size:11px; }
+        .active-filters-bar .aflabel { color:#8fa6c0; text-transform:uppercase; letter-spacing:0.5px; font-weight:600; font-size:10px; margin-right:4px; }
+        .active-filters-bar .afchip { display:inline-flex; align-items:center; gap:6px; background:rgba(91,155,213,0.18); border:1px solid #5b9bd5; color:#e0eaff; padding:3px 8px 3px 10px; border-radius:999px; font-weight:600; }
+        .active-filters-bar .afchip .afchip-type { color:#8fb8ff; font-weight:500; font-size:10px; text-transform:uppercase; }
+        .active-filters-bar .afchip .afchip-x { cursor:pointer; color:#ff8787; font-weight:700; padding:0 2px; }
+        .active-filters-bar .afchip .afchip-x:hover { color:#c44e4e; }
+        .active-filters-bar .afclear { margin-left:auto; cursor:pointer; color:#8fa6c0; font-size:10px; text-transform:uppercase; letter-spacing:0.5px; }
+        .active-filters-bar .afclear:hover { color:#c44e4e; }
+        .zona-btn .zona-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; gap: 8px; }
+        .zona-btn .zona-name { font-size: 12px; font-weight: 600; color: #e0e6ed; text-transform: uppercase; }
+        .zona-btn .zona-total-imp { font-size: 12px; font-weight: 700; color: #7fb4dc; font-family: ui-monospace, monospace; white-space: nowrap; }
+        .zona-btn .zona-bar-caption { font-size: 8px; color: #556778; text-transform: uppercase; letter-spacing: 0.4px; text-align: center; margin-top: 6px; margin-bottom: 2px; }
+        .zona-btn .balance-bar { width: 100%; }
+
+        /* Asesores section */
+        .asesor-card { background: #1b2836; border-radius: 8px; margin-bottom: 6px; overflow: hidden; }
+        .asesor-card-header { display: grid; grid-template-columns: 40px 160px 1fr 20px; align-items: center; gap: 10px; padding: 10px 14px 6px 14px; cursor: pointer; transition: background 0.2s; }
+        .asesor-bars-row { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 0 4px 4px 4px; align-items: center; }
+        .asesor-bars-row .asesor-bar-block { display: flex; flex-direction: column; gap: 2px; width: 100%; }
+        .asesor-bars-row .asesor-bar-block .bar-caption { font-size: 8px; color: #556778; text-transform: uppercase; letter-spacing: 0.4px; text-align: center; }
+        .proy-card-header { display: grid; grid-template-columns: 40px 1fr 3.2fr; align-items: center; gap: 10px; padding: 10px 14px; }
+        .asesor-card-header:hover { background: rgba(91, 155, 213,0.08); }
+        .asesor-photo { width: 40px; height: 40px; min-width: 40px; border-radius: 50%; object-fit: cover; background: #2d4a5e; }
+        .asesor-id-block { flex: 1; min-width: 0; }
+        .asesor-name { font-size: 14px; font-weight: 600; color: #e0e6ed; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .asesor-subtitle { font-size: 11px; color: #7a8fa6; margin-top: 2px; }
+        .asesor-kpis { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; align-items: center; }
+        .asesor-kpi { text-align: center; padding: 4px 6px; border-radius: 6px; background: rgba(15,25,35,0.5); }
+        .asesor-kpi-label { font-size: 9px; color: #7a8fa6; margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.3px; }
+        .asesor-kpi-val { font-size: 16px; font-weight: 700; line-height: 1; }
+        .asesor-balance { width: 120px; display: flex; flex-direction: column; align-items: center; gap: 2px; flex-shrink: 0; }
+        .balance-bar { width: 100%; height: 16px; border-radius: 4px; display: flex; overflow: hidden; }
+        .balance-bar .bar-risk { background: #c44e4e; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; color: #fff; overflow: hidden; white-space: nowrap; }
+        .balance-bar .bar-safe { background: #4a9982; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; color: #fff; overflow: hidden; white-space: nowrap; }
+        .balance-bar .bar-asert-sin { background: #f3f4f6; height: 100%; color: #111827 !important; }
+        .balance-bar .bar-asert-bajo { background: #4a9982; height: 100%; }
+        .balance-bar .bar-asert-medio { background: #c48a4a; height: 100%; }
+        .balance-bar .bar-asert-alto { background: #c44e4e; height: 100%; }
+        .balance-bar.bar-asert { height: 16px; border-radius: 4px; }
+        .balance-bar.bar-asert > div { display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; color: #fff; overflow: hidden; white-space: nowrap; }
+        .balance-label { font-size: 9px; color: #556778; display: flex; justify-content: space-between; width: 100%; }
+        .balance-sublabel { font-size: 8px; color: #556778; text-transform: uppercase; letter-spacing: 0.4px; margin-top: 4px; width: 100%; text-align: center; }
+        .asesor-expand { font-size: 16px; color: #556778; margin-left: 8px; transition: transform 0.2s; user-select: none; }
+        .asesor-card.open .asesor-expand { transform: rotate(180deg); }
+        .asesor-detail { display: none; padding: 0 12px 8px; }
+        .asesor-card.open .asesor-detail { display: block; }
+        .asesor-detail-table { width: 100%; border-collapse: collapse; table-layout: auto; }
+        .asesor-detail-table th { font-size: 9px; font-weight: 600; color: #556778; text-transform: uppercase; padding: 4px 6px; text-align: left; border-bottom: 1px solid #2d4a5e; white-space: nowrap; line-height: 1.15; letter-spacing: 0.3px; }
+        .asesor-detail-table td { font-size: 11px; padding: 3px 6px; border-bottom: 1px solid #243447; color: #a0b4c8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3; }
+        .asesor-detail-table tr:hover td { background: rgba(91,155,213,0.04); }
+        .asesor-detail-table tr:last-child td { border-bottom: none; }
+        .days-pill { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+        .days-pill.green { background: rgba(74,153,130,0.15); color: #4a9982; }
+        .days-pill.yellow { background: rgba(196,138,74,0.15); color: #c48a4a; }
+        .days-pill.red { background: rgba(196,78,78,0.15); color: #c44e4e; }
+
+        /* ========== V5 · Tarjeta de proyecto con timeline y movement bar ========== */
+        .v5-card { background: #1b2836; border-radius: 10px; margin-bottom: 8px; color: #e0e6ed; font-size: 12px; overflow: hidden; position: relative; }
+        .v5-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; z-index: 2; }
+        .v5-card.risk-alto::before { background: #c44e4e; }
+        .v5-card.risk-medio::before { background: #c48a4a; }
+        .v5-card.risk-nulo::before { background: #6b7280; }
+        .v5-card.risk-alto { background: linear-gradient(90deg, rgba(196,78,78,0.09) 0%, #1b2836 15%); border: 1px solid rgba(196,78,78,0.3); }
+        .v5-card.risk-medio { background: linear-gradient(90deg, rgba(196,138,74,0.08) 0%, #1b2836 15%); border: 1px solid rgba(196,138,74,0.25); }
+        .v5-card.risk-nulo { border: 1px solid #2d4a5e; } /* sin gradient: Matriz Nulo = neutro, sin tinte */
+
+        .v5-header { display: grid; grid-template-columns: 44px 1.5fr repeat(4, 0.85fr); gap: 14px; align-items: end; padding: 12px 18px 10px 30px; border-bottom: 1px solid rgba(45,74,94,0.5); }
+        .v5-id-name { font-size: 14px; color: #e0e6ed; font-weight: 600; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .v5-id-name a { color: inherit; }
+        .v5-id-opp { font-size: 11px; color: #7fb4dc; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .v5-id-sub { font-size: 10px; color: #7a8fa6; margin-top: 4px; }
+        .v5-kpi-col { text-align: center; padding-top: 4px; }
+        .v5-kpi-label { font-size: 9px; color: #556778; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 5px; font-weight: 600; }
+        .v5-money { font-size: 17px; font-weight: 700; color: #7fb4dc; line-height: 1; }
+        .v5-chip { display: inline-block; padding: 3px 9px; border-radius: 10px; font-size: 11px; font-weight: 600; border: 1px solid; white-space: nowrap; }
+        .v5-pill { display: inline-block; padding: 3px 10px; border-radius: 10px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+
+        .v5-body { padding: 8px 20px 8px 30px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+        .v5-section-label { font-size: 9px; color: #556778; text-transform: uppercase; letter-spacing: 0.6px; font-weight: 600; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: baseline; }
+        .v5-section-label .meta { text-transform: none; letter-spacing: 0; color: #7a8fa6; font-weight: 400; font-size: 10px; }
+
+        .v5-timeline { position: relative; height: 56px; margin-top: 2px; }
+        .v5-rail { position: absolute; top: 20px; left: 0; right: 0; height: 3px; background: #2d4a5e; border-radius: 2px; }
+        .v5-rail-fill { position: absolute; top: 20px; height: 3px; border-radius: 2px; }
+        .v5-today-line { position: absolute; top: 6px; bottom: 20px; width: 1px; border-left: 1px dashed rgba(91,155,213,0.55); }
+        .v5-today-label { position: absolute; top: -2px; font-size: 9px; color: #7fb4dc; transform: translateX(-50%); background: #1b2836; padding: 0 4px; white-space: nowrap; }
+        .v5-ms { position: absolute; top: 12px; text-align: center; width: 80px; margin-left: -40px; }
+        .v5-ms .dot { width: 18px; height: 18px; border-radius: 50%; border: 3px solid #1b2836; margin: 0 auto; box-shadow: 0 0 0 1px currentColor; }
+        .v5-ms .dot-small { width: 10px; height: 10px; border-radius: 50%; border: 2px solid #1b2836; margin: 4px auto 0; }
+        .v5-ms .ms-label { font-size: 9px; color: #7a8fa6; margin-top: 2px; line-height: 1.15; }
+        .v5-ms .ms-date { font-size: 10px; color: #a0b4c8; font-weight: 600; }
+        .v5-ms .ms-date.strike { color: #6b7280; text-decoration: line-through; }
+        .v5-push-tick { position: absolute; top: 18px; width: 7px; height: 7px; border-radius: 50%; background: #c48a4a; border: 2px solid #1b2836; transform: translateX(-50%); z-index: 2; cursor: help; transition: transform .15s; }
+        .v5-push-tick:hover { transform: translateX(-50%) scale(1.3); }
+
+        .v5-mbar { display: flex; height: 26px; border-radius: 5px; overflow: hidden; background: #0a1420; border: 1px solid #2d4a5e; }
+        .v5-mseg { display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #fff; border-right: 1px solid rgba(255,255,255,0.16); min-width: 30px; cursor: help; transition: filter .15s; }
+        .v5-mseg:last-child { border-right: none; }
+        .v5-mseg:hover { filter: brightness(1.2); }
+        .v5-mstats { display: flex; justify-content: space-between; font-size: 10px; color: #7a8fa6; margin-top: 8px; }
+        .v5-mstats strong { color: #e0e6ed; }
+        .v5-empty-stable { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: rgba(74,153,130,0.08); border: 1px solid rgba(74,153,130,0.25); border-radius: 6px; font-size: 11px; }
+
+        /* V5 · Lag Venta→Inicio comparison (full-width section) */
+        .v5-lagcmp { grid-column: 1 / -1; margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(45,74,94,0.5); }
+        .v5-lagcmp-row { display: grid; grid-template-columns: 120px 1fr 50px; gap: 10px; align-items: center; font-size: 10px; margin-bottom: 4px; }
+        .v5-lagcmp-row .lbl { color: #7a8fa6; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .v5-lagcmp-row .bar-wrap { background: rgba(45,74,94,0.4); height: 10px; border-radius: 3px; overflow: hidden; }
+        .v5-lagcmp-row .bar { height: 100%; border-radius: 3px; transition: width .15s; }
+        .v5-lagcmp-row .val { font-weight: 700; text-align: right; font-family: ui-monospace, monospace; }
+        .v5-lagcmp-row.this-deal .lbl { color: #e0e6ed; font-weight: 600; }
+
+        /* Bottom row */
+        .bottom-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+        .insight-item { padding: 12px 0; border-bottom: 1px solid #1e2d3d; display: flex; align-items: flex-start; gap: 10px; }
+        .insight-item:last-child { border-bottom: none; }
+        .insight-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+        .insight-icon.red { background: rgba(196, 78, 78,0.15); }
+        .insight-icon.yellow { background: rgba(196, 138, 74,0.15); }
+        .insight-icon.blue { background: rgba(91, 155, 213,0.15); }
+        .insight-icon.green { background: rgba(74, 153, 130,0.15); }
+        .insight-text { font-size: 13px; color: #a0b4c8; }
+        .insight-text strong { color: #e0e6ed; }
+
+        .sprint2-preview { display: flex; align-items: center; justify-content: center; height: 100%; min-height: 200px; }
+        .sprint2-box { text-align: center; padding: 30px; border: 2px dashed #2d4a5e; border-radius: 12px; max-width: 320px; }
+        .sprint2-box .title { font-size: 14px; font-weight: 600; color: #7a8fa6; margin-bottom: 6px; }
+        .sprint2-box .desc { font-size: 12px; color: #556778; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <h1>Monitoreo de cambios en fechas de inicio y termino de ejecucion | Sprint 1</h1>
+        </div>
+        <div class="badges">
+            <div class="date-badge">Snapshots desde: 01/Mar/2026</div>
+            <div class="date-badge">Cierre venta desde: 01/Ago/2025</div>
+            <div class="date-badge" id="badge-extraccion">Extracción: --</div>
+        </div>
+    </div>
+
+    <div class="dashboard-layout">
+    <!-- PARTE SUPERIOR: KPIs globales -->
+    <div class="top-kpis">
+        <div style="display:grid; grid-template-columns:260px 1fr; gap:24px;">
+            <!-- Columna izq: Matriz de Riesgo (ocupa las 2 filas) -->
+            <div class="risk-matrix">
+                <div class="matrix-corner"></div>
+                <div class="matrix-col-header" style="font-size:12px;padding:3px;">Sin CECO</div>
+                <div class="matrix-col-header" style="font-size:12px;padding:3px;">Con CECO</div>
+                <div class="matrix-row-header" style="font-size:12px;padding:3px;">Iniciado</div>
+                <div class="matrix-cell alto" onclick="filterMatrix('Si','No')" style="min-height:auto;padding:8px;">
+                    <div class="cell-count" id="mat-alto" style="font-size:20px;">--</div>
+                    <div class="cell-importe" id="mat-alto-imp" style="font-size:10px;">--</div>
+                </div>
+                <div class="matrix-cell ok" onclick="filterMatrix('Si','Si')" style="min-height:auto;padding:8px;">
+                    <div class="cell-count" id="mat-ok" style="font-size:20px;">--</div>
+                    <div class="cell-importe" id="mat-ok-imp" style="font-size:10px;">--</div>
+                </div>
+                <div class="matrix-row-header" style="font-size:12px;padding:3px;">No inic.</div>
+                <div class="matrix-cell nulo" onclick="filterMatrix('No','No')" style="min-height:auto;padding:8px;">
+                    <div class="cell-count" id="mat-nulo" style="font-size:20px;">--</div>
+                    <div class="cell-importe" id="mat-nulo-imp" style="font-size:10px;">--</div>
+                </div>
+                <div class="matrix-cell medio" onclick="filterMatrix('No','Si')" style="min-height:auto;padding:8px;">
+                    <div class="cell-count" id="mat-medio" style="font-size:20px;">--</div>
+                    <div class="cell-importe" id="mat-medio-imp" style="font-size:10px;">--</div>
+                </div>
+            </div>
+            <!-- Columna der: Zonas + KPIs -->
+            <div style="display:flex; flex-direction:column; gap:8px;">
+                <!-- Zonas -->
+                <div class="zona-bar" id="zona-bar"></div>
+                <!-- KPIs en dos grupos: Riesgo de asertividad (4) + Resumen (2) -->
+                <div class="kpi-row-compact" style="display:grid; grid-template-columns:4fr 2fr; gap:10px;">
+                    <div class="kpi-group group-asertividad">
+                        <div class="kpi-group-title" title="Distribución de proyectos según los días de desfase entre fecha original y fecha actual de inicio">Riesgo de asertividad</div>
+                        <div class="kpi-group-cards" style="grid-template-columns:repeat(4,1fr);">
+                            <div class="kpi-card white" style="cursor:pointer;padding:6px 8px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;" onclick="filterAsertividad('Sin')">
+                                <div class="kpi-value" id="asert-sin-n" style="font-size:28px;">--</div>
+                                <div class="kpi-label" style="font-size:12px;">Sin cambios</div>
+                                <div class="kpi-importe" id="asert-sin-imp" style="font-size:13px;">--</div>
+                            </div>
+                            <div class="kpi-card green" style="cursor:pointer;padding:6px 8px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;" onclick="filterAsertividad('Bajo')">
+                                <div class="kpi-value" id="asert-bajo-n" style="font-size:28px;">--</div>
+                                <div class="kpi-label" style="font-size:12px;">Bajo (0-14d)</div>
+                                <div class="kpi-importe" id="asert-bajo-imp" style="font-size:13px;">--</div>
+                            </div>
+                            <div class="kpi-card yellow" style="cursor:pointer;padding:6px 8px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;" onclick="filterAsertividad('Medio')">
+                                <div class="kpi-value" id="asert-medio-n" style="font-size:28px;">--</div>
+                                <div class="kpi-label" style="font-size:12px;">Medio (15-30d)</div>
+                                <div class="kpi-importe" id="asert-medio-imp" style="font-size:13px;">--</div>
+                            </div>
+                            <div class="kpi-card red" style="cursor:pointer;padding:6px 8px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;" onclick="filterAsertividad('Alto')">
+                                <div class="kpi-value" id="asert-alto-n" style="font-size:28px;">--</div>
+                                <div class="kpi-label" style="font-size:12px;">Alto (&gt;30d)</div>
+                                <div class="kpi-importe" id="asert-alto-imp" style="font-size:13px;">--</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="kpi-group group-resumen">
+                        <div class="kpi-group-title" title="Totales generales del portafolio filtrado">Resumen</div>
+                        <div class="kpi-group-cards" style="grid-template-columns:repeat(2,1fr);">
+                            <div class="kpi-card blue" style="cursor:pointer;padding:6px 8px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;" onclick="filterKpi('Todos')">
+                                <div class="kpi-value" id="kpi-total" style="font-size:28px;">--</div>
+                                <div class="kpi-label" style="font-size:12px;">Total Proyectos</div>
+                                <div class="kpi-importe" id="kpi-total-imp" style="font-size:13px;">--</div>
+                            </div>
+                            <div class="kpi-card purple" style="cursor:pointer;padding:6px 8px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;" onclick="filterKpi('ConCambios')">
+                                <div class="kpi-value" id="kpi-cambios-inicio" style="font-size:28px;">--</div>
+                                <div class="kpi-label" style="font-size:12px;">Movieron Fecha</div>
+                                <div class="kpi-importe" id="kpi-cambios-imp" style="font-size:13px;">--</div>
+                                <div class="kpi-detail" id="kpi-cambios-stats" style="font-size:11px;">--</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Filtros por categoría: Lag venta / Días movimiento / Cantidad de movimientos -->
+                <div class="bucket-filters">
+                    <div class="bucket-filter">
+                        <span class="bucket-filter-title" title="Días entre cierre de venta y fecha de inicio del proyecto">Lag venta → inicio</span>
+                        <div class="bucket-chips">
+                            <span class="bucket-chip" data-group="lag" data-bucket="0-30" onclick="filterLagBucket('0-30')"><span class="chip-label">0-30d</span><span class="chip-count">--</span><span class="chip-imp">--</span></span>
+                            <span class="bucket-chip" data-group="lag" data-bucket="30-60" onclick="filterLagBucket('30-60')"><span class="chip-label">30-60d</span><span class="chip-count">--</span><span class="chip-imp">--</span></span>
+                            <span class="bucket-chip" data-group="lag" data-bucket="60-90" onclick="filterLagBucket('60-90')"><span class="chip-label">60-90d</span><span class="chip-count">--</span><span class="chip-imp">--</span></span>
+                            <span class="bucket-chip" data-group="lag" data-bucket="90-180" onclick="filterLagBucket('90-180')"><span class="chip-label">90-180d</span><span class="chip-count">--</span><span class="chip-imp">--</span></span>
+                            <span class="bucket-chip" data-group="lag" data-bucket=">180" onclick="filterLagBucket('>180')"><span class="chip-label">&gt;180d</span><span class="chip-count">--</span><span class="chip-imp">--</span></span>
+                        </div>
+                    </div>
+                    <div class="bucket-filter">
+                        <span class="bucket-filter-title" title="Días netos que se ha movido la fecha de inicio del proyecto">Días de movimiento</span>
+                        <div class="bucket-chips">
+                            <span class="bucket-chip" data-group="mov" data-bucket="0-30" onclick="filterMovBucket('0-30')"><span class="chip-label">0-30d</span><span class="chip-count">--</span><span class="chip-imp">--</span></span>
+                            <span class="bucket-chip" data-group="mov" data-bucket="30-60" onclick="filterMovBucket('30-60')"><span class="chip-label">30-60d</span><span class="chip-count">--</span><span class="chip-imp">--</span></span>
+                            <span class="bucket-chip" data-group="mov" data-bucket="60-90" onclick="filterMovBucket('60-90')"><span class="chip-label">60-90d</span><span class="chip-count">--</span><span class="chip-imp">--</span></span>
+                            <span class="bucket-chip" data-group="mov" data-bucket="90-180" onclick="filterMovBucket('90-180')"><span class="chip-label">90-180d</span><span class="chip-count">--</span><span class="chip-imp">--</span></span>
+                            <span class="bucket-chip" data-group="mov" data-bucket=">180" onclick="filterMovBucket('>180')"><span class="chip-label">&gt;180d</span><span class="chip-count">--</span><span class="chip-imp">--</span></span>
+                        </div>
+                    </div>
+                    <div class="bucket-filter">
+                        <span class="bucket-filter-title" title="Cuántas veces se ha movido la fecha de inicio del proyecto">Cantidad de movimientos</span>
+                        <div class="bucket-chips">
+                            <span class="bucket-chip" data-group="count" data-bucket="sin" onclick="filterCountBucket('sin')"><span class="chip-label">Sin mov</span><span class="chip-count">--</span><span class="chip-imp">--</span></span>
+                            <span class="bucket-chip" data-group="count" data-bucket="1" onclick="filterCountBucket('1')"><span class="chip-label">1 mov</span><span class="chip-count">--</span><span class="chip-imp">--</span></span>
+                            <span class="bucket-chip" data-group="count" data-bucket="2" onclick="filterCountBucket('2')"><span class="chip-label">2 mov</span><span class="chip-count">--</span><span class="chip-imp">--</span></span>
+                            <span class="bucket-chip" data-group="count" data-bucket="3" onclick="filterCountBucket('3')"><span class="chip-label">3 mov</span><span class="chip-count">--</span><span class="chip-imp">--</span></span>
+                            <span class="bucket-chip" data-group="count" data-bucket="4" onclick="filterCountBucket('4')"><span class="chip-label">4 mov</span><span class="chip-count">--</span><span class="chip-imp">--</span></span>
+                            <span class="bucket-chip" data-group="count" data-bucket=">4" onclick="filterCountBucket('>4')"><span class="chip-label">&gt;4 mov</span><span class="chip-count">--</span><span class="chip-imp">--</span></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Barra de filtros activos (visible solo si hay filtros aplicados) -->
+    <div id="active-filters-bar" class="active-filters-bar" style="display:none;"></div>
+
+    <!-- PARTE INFERIOR: Asesores (izq) + Proyectos (der) -->
+    <div class="bottom-panels">
+        <div class="panel-left">
+            <div class="section-title">Salud Comercial por Asesor</div>
+            <div id="asesores-unified"></div>
+        </div>
+        <div class="panel-right">
+            <div class="section-title">Salud Comercial por Proyecto</div>
+            <div id="proyectos-unified"></div>
+        </div>
+    </div>
+
+    <!-- Hidden elements -->
+    <canvas id="chart-donut" style="display:none;"></canvas>
+    <span id="kpi-pct-riesgo" style="display:none;"></span>
+    <span id="kpi-pct-detail" style="display:none;"></span>
+    <span id="donut-legend" style="display:none;"></span>
+    <div id="chart-treemap" style="display:none;"></div>
+    <div id="chart-zonas" style="display:none;"></div>
+    <span id="kpi-alto" style="display:none"></span>
+    <span id="kpi-alto-imp" style="display:none"></span>
+    <span id="kpi-medio" style="display:none"></span>
+    <span id="kpi-medio-imp" style="display:none"></span>
+    <span id="kpi-ok" style="display:none"></span>
+    <span id="kpi-ok-imp" style="display:none"></span>
+    <span id="insight-1" style="display:none"></span>
+    <span id="insight-2" style="display:none"></span>
+    <span id="insight-3" style="display:none"></span>
+    <span id="insight-4" style="display:none"></span>
+    </div>
+
+    <script>
+    let allData = [];
+    let currentFilter = 'Todos';
+    let matrixFilter = null;
+    let asertFilter = null;
+    let zonaFilter = new Set(); // Multi-selección. Set vacío = TODAS las zonas.
+    let asesorFilter = null;
+    let projectFilter = null; // Id de oportunidad seleccionada en la tabla expandible del asesor
+    let lagBucket = null, movBucket = null; // Una de: '0-30', '30-60', '60-90', '>90' (null = sin filtro)
+    let countBucket = null; // Una de: 'sin', '1', '2-4', '>4' (null = sin filtro)
+    const openAsesores = new Set(); // Nombres de asesores con tarjeta expandida (persiste entre renders)
+
+    function toggleAsesorOpen(name) {
+        if (openAsesores.has(name)) openAsesores.delete(name);
+        else openAsesores.add(name);
+        const nameSafe = name.replace(/'/g, "\\'");
+        document.querySelectorAll('.asesor-card').forEach(c => {
+            const n = c.querySelector('.asesor-name');
+            if (n && n.textContent === name) c.classList.toggle('open', openAsesores.has(name));
+        });
+    }
+    let sortCol = 4;
+    let sortAsc = false;
+
+    function fmtDate(val) {
+        if (!val || val === '-') return '-';
+        const d = new Date(val);
+        if (isNaN(d)) return val;
+        return String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + d.getFullYear();
+    }
+
+    function fmtMoney(val) {
+        if (val >= 1000000) return '$' + (val / 1000000).toFixed(1) + 'M';
+        if (val >= 1000) return '$' + (val / 1000).toFixed(0) + 'K';
+        return '$' + val.toFixed(0);
+    }
+
+    function fmtMoneyFull(val) {
+        return '$' + val.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+    }
+
+    // ========== Helpers V5 ==========
+    function fmtMoneyCompact(n) {
+        // 3000000 -> "$3.0M", 760150 -> "$760K", 285000 -> "$285K"
+        // Distinguir "sin dato" (--) de "cero real" ($0) para fidelidad del dashboard de riesgo.
+        if (n == null || isNaN(n)) return '--';
+        if (n === 0) return '$0';
+        const abs = Math.abs(n);
+        if (abs >= 1e6) return '$' + (n / 1e6).toFixed(1) + 'M';
+        if (abs >= 1e3) return '$' + Math.round(n / 1e3) + 'K';
+        return '$' + Math.round(n);
+    }
+
+    function fmtDateShort(iso) {
+        // '2026-03-17' -> '17/mar'  · '' -> '--'
+        if (!iso) return '--';
+        const meses = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+        const parts = String(iso).substring(0, 10).split('-');
+        if (parts.length < 3) return iso;
+        const mIdx = parseInt(parts[1], 10) - 1;
+        if (mIdx < 0 || mIdx > 11) return iso;
+        return parts[2] + '/' + meses[mIdx];
+    }
+
+    function estadoChip(d, today) {
+        // chip dinámico según ultimoInicio vs hoy
+        // Parse YYYY-MM-DD como fecha LOCAL (new Date('2026-04-22') parsea como UTC midnight, causa off-by-one en TZ negativas como CDMX).
+        if (!d.ultimoInicio) {
+            return '<span class="v5-chip" style="color:#c44e4e; border-color:#c44e4e;">✗ No iniciado</span>';
+        }
+        const parts = String(d.ultimoInicio).substring(0, 10).split('-');
+        if (parts.length < 3) return '<span class="v5-chip" style="color:#c44e4e; border-color:#c44e4e;">✗ No iniciado</span>';
+        const start = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+        const diff = Math.floor((today - start) / 86400000);
+        if (diff === 0) {
+            return '<span class="v5-chip" style="color:#4a9982; border-color:#4a9982;">✓ Inicia hoy</span>';
+        }
+        if (diff > 0) {
+            return '<span class="v5-chip" style="color:#4a9982; border-color:#4a9982;">✓ ' + diff + 'd iniciado</span>';
+        }
+        return '<span class="v5-chip" style="color:#c48a4a; border-color:#c48a4a;">⧖ Faltan ' + Math.abs(diff) + 'd</span>';
+    }
+
+    function asertividadPill(ra) {
+        // 'Bajo (0-14 dias)' -> Bajo verde · 'Medio...' -> naranja · 'Alto...' -> rojo · 'Sin cambios' -> gris
+        if (!ra || ra.startsWith('Sin')) return '<span class="v5-pill" style="background:rgba(107,114,128,0.16); color:#9ca3af;">Sin</span>';
+        if (ra.startsWith('Bajo')) return '<span class="v5-pill" style="background:rgba(74,153,130,0.16); color:#4a9982;">Bajo</span>';
+        if (ra.startsWith('Medio')) return '<span class="v5-pill" style="background:rgba(196,138,74,0.16); color:#c48a4a;">Medio</span>';
+        if (ra.startsWith('Alto')) return '<span class="v5-pill" style="background:rgba(196,78,78,0.16); color:#c44e4e;">Alto</span>';
+        return '<span class="v5-pill" style="background:rgba(107,114,128,0.16); color:#9ca3af;">' + ra + '</span>';
+    }
+
+    function riesgoMatrizClass(riesgo) {
+        if (riesgo === 'Alto') return 'risk-alto';
+        if (riesgo === 'Medio') return 'risk-medio';
+        return 'risk-nulo';
+    }
+
+    function escapeHtml(s) {
+        // Escapa caracteres que podrían romper atributos/markup cuando strings dinámicos se concatenan en title="...", labels, etc.
+        return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function buildTimeline(d, today) {
+        // Calcula proporciones reales y retorna markup del componente timeline.
+        // Parse YYYY-MM-DD como fecha LOCAL para evitar off-by-one TZ.
+        const toDate = s => {
+            if (!s) return null;
+            const parts = String(s).substring(0, 10).split('-');
+            if (parts.length < 3) return null;
+            return new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+        };
+        const primerInicio = toDate(d.primerInicio);
+        const ultimoInicio = toDate(d.ultimoInicio);
+        const fechaCierre = toDate(d.fechaCierre);
+
+        // Determinar t_min y t_max
+        const candidatosMin = [fechaCierre, primerInicio, ultimoInicio].filter(Boolean);
+        const candidatosMax = [fechaCierre, ultimoInicio, today].filter(Boolean);
+        if (candidatosMin.length === 0 || candidatosMax.length === 0) {
+            return '<div style="font-size:11px;color:#556778;padding:20px 0;text-align:center;">Sin fechas registradas</div>';
+        }
+        const tMin = new Date(Math.min.apply(null, candidatosMin));
+        const tMax = new Date(Math.max.apply(null, candidatosMax));
+        const span = Math.max((tMax - tMin) / 86400000, 1);
+
+        // posición porcentual con recorte a [3%, 97%]
+        const pct = (fecha) => {
+            if (!fecha) return null;
+            const raw = ((fecha - tMin) / 86400000) / span * 100;
+            return Math.min(Math.max(raw, 3), 97);
+        };
+
+        const hayPushes = d.cambiosInicio > 0;
+        const tieneOriginalDistinto = primerInicio && ultimoInicio && primerInicio.getTime() !== ultimoInicio.getTime();
+
+        // Rail fill: desde cierre hasta ultimoInicio
+        let railHtml = '';
+        if (fechaCierre && ultimoInicio) {
+            const a = pct(fechaCierre);
+            const b = pct(ultimoInicio);
+            const grad = hayPushes ? 'linear-gradient(to right,#4a9982,#c48a4a)' : '#4a9982';
+            railHtml = '<div class="v5-rail-fill" style="left:' + a + '%; right:' + (100 - b) + '%; background:' + grad + ';"></div>';
+        }
+
+        // Milestones — posicionamiento con detección de colisión
+        // Umbral: si dos milestones caen dentro de 15% del ancho, sus labels de 80px se encimarían.
+        const pctOrig = tieneOriginalDistinto ? pct(primerInicio) : null;
+        const pctCierre = fechaCierre ? pct(fechaCierre) : null;
+        const pctActual = ultimoInicio ? pct(ultimoInicio) : null;
+        const mergeOrigActual = pctOrig != null && pctActual != null && Math.abs(pctOrig - pctActual) < 15;
+
+        let msHtml = '';
+        if (tieneOriginalDistinto && !mergeOrigActual) {
+            // Original separado cuando está lejos del actual
+            msHtml += '<div class="v5-ms" style="left:' + pctOrig + '%;">' +
+                '<div class="dot-small" style="background:#6b7280;"></div>' +
+                '<div class="ms-label" style="font-size:8px;">Inicio original</div>' +
+                '<div class="ms-date strike">' + fmtDateShort(d.primerInicio) + '</div>' +
+                '</div>';
+        }
+        if (fechaCierre) {
+            msHtml += '<div class="v5-ms" style="left:' + pctCierre + '%;">' +
+                '<div class="dot" style="background:#4a9982; color:#4a9982;"></div>' +
+                '<div class="ms-label">Cierre Venta</div>' +
+                '<div class="ms-date">' + fmtDateShort(d.fechaCierre) + '</div>' +
+                '</div>';
+        }
+        if (ultimoInicio) {
+            const yaInicio = ultimoInicio <= today;
+            const colorActual = (hayPushes && !yaInicio) ? '#c48a4a' : '#4a9982';
+            const lbl = hayPushes ? 'Inicio ACTUAL' : 'Inicio Proyecto';
+            // Si mergeOrigActual, fecha compuesta: original tachado + actual
+            const dateHtml = mergeOrigActual
+                ? '<div class="ms-date"><span style="color:#6b7280; text-decoration:line-through; font-size:9px;">' + fmtDateShort(d.primerInicio) + '</span> ' + fmtDateShort(d.ultimoInicio) + '</div>'
+                : '<div class="ms-date">' + fmtDateShort(d.ultimoInicio) + '</div>';
+            msHtml += '<div class="v5-ms" style="left:' + pctActual + '%;">' +
+                '<div class="dot" style="background:' + colorActual + '; color:' + colorActual + ';"></div>' +
+                '<div class="ms-label">' + lbl + '</div>' +
+                dateHtml +
+                '</div>';
+        }
+
+        // Push ticks (hover tooltip)
+        let ticksHtml = '';
+        (d.historialCambiosInicio || []).forEach((push, idx) => {
+            const fSnap = toDate(push.fecha_snapshot);
+            if (!fSnap) return;
+            const p = pct(fSnap);
+            const sign = push.dias_empujados > 0 ? '+' : '';
+            const tip = 'Push ' + (idx + 1) + ' · ' + fmtDateShort(push.fecha_snapshot) + ' · ' + sign + push.dias_empujados + 'd';
+            ticksHtml += '<div class="v5-push-tick" style="left:' + p + '%;" title="' + escapeHtml(tip) + '"></div>';
+        });
+
+        // Línea "Hoy" — si cae cerca (≤8%) de algún milestone con label, acortamos el label para evitar solape
+        const pctHoy = pct(today);
+        const hoyIso = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+        const milestonePcts = [pctCierre, pctActual, (mergeOrigActual ? null : pctOrig)].filter(x => x != null);
+        const hoyColisiona = milestonePcts.some(p => Math.abs(p - pctHoy) < 8);
+        const hoyLabel = hoyColisiona ? '· Hoy ·' : ('· Hoy ' + fmtDateShort(hoyIso) + ' ·');
+        const todayHtml = '<div class="v5-today-line" style="left:' + pctHoy + '%;"></div>' +
+            '<div class="v5-today-label" style="left:' + pctHoy + '%;">' + hoyLabel + '</div>';
+
+        return '<div>' +
+            '<div class="v5-section-label"><span>Línea de tiempo</span></div>' +
+            '<div class="v5-timeline">' +
+                '<div class="v5-rail"></div>' +
+                railHtml +
+                msHtml +
+                ticksHtml +
+                todayHtml +
+            '</div>' +
+            '</div>';
+    }
+
+    function buildMovementBar(d) {
+        const historial = d.historialCambiosInicio || [];
+
+        // Empty state · Plan estable
+        if (historial.length === 0) {
+            return '<div>' +
+                '<div class="v5-section-label"><span>Historial de movimientos</span><span class="meta">Sin cambios</span></div>' +
+                '<div class="v5-empty-stable">' +
+                    '<span style="font-size:20px; color:#4a9982;">✓</span>' +
+                    '<div>' +
+                        '<div style="color:#4a9982; font-weight:600;">Plan estable</div>' +
+                        '<div style="color:#7a8fa6; font-size:10px; margin-top:2px;">La fecha de inicio nunca se movió</div>' +
+                    '</div>' +
+                '</div>' +
+            '</div>';
+        }
+
+        // Segmentos — mismo semáforo que .days-pill (>60 rojo, >30 naranja, ≤30 verde, <0 azul)
+        const segColor = (dias) => {
+            if (dias < 0) return '#5b9bd5';
+            if (dias > 60) return '#c44e4e';
+            if (dias > 30) return '#c48a4a';
+            return '#4a9982';
+        };
+
+        let segsHtml = '';
+        historial.forEach((push, idx) => {
+            const d_ = push.dias_empujados;
+            const flexVal = Math.max(Math.abs(d_), 5); // mínimo 5 para que micro-pushes no se aplasten
+            const color = segColor(d_);
+            const sign = d_ > 0 ? '+' : '';
+            const tip = 'Push ' + (idx + 1) + ' · ' + fmtDateShort(push.fecha_snapshot) + ': ' + sign + d_ + 'd';
+            segsHtml += '<div class="v5-mseg" style="flex:' + flexVal + '; background:' + color + ';" title="' + escapeHtml(tip) + '">' + sign + d_ + 'd</div>';
+        });
+
+        const netDias = d.diasInicio || 0;
+        const netColor = segColor(netDias);
+        const netSign = netDias > 0 ? '+' : '';
+        const primero = historial[0];
+        const ultimo = historial[historial.length - 1];
+        const deDate = fmtDateShort(primero.valor_antes);
+        const aDate = fmtDateShort(ultimo.valor_despues);
+
+        const metaTxt = historial.length + (historial.length === 1 ? ' cambio' : ' pushes') + ' · ' + netSign + netDias + 'd net';
+
+        return '<div>' +
+            '<div class="v5-section-label"><span>Historial de movimientos</span><span class="meta">' + metaTxt + '</span></div>' +
+            '<div class="v5-mbar">' + segsHtml + '</div>' +
+            '<div class="v5-mstats">' +
+                '<span>De <strong style="color:#6b7280; text-decoration:line-through;">' + deDate + '</strong> a <strong style="color:' + netColor + ';">' + aDate + '</strong></span>' +
+            '</div>' +
+        '</div>';
+    }
+
+    function buildLagCompare(d, lagBench) {
+        // Mini-barra comparativa de días desde cierre venta hasta inicio proyecto.
+        // Compara el deal actual contra 3 benchmarks fijos: zona, asesor, global.
+        if (d.diasVentaInicio == null) return '';
+        const lagThis = d.diasVentaInicio;
+        const lagZ = Math.round(lagBench.zona(d.zona));
+        const lagA = Math.round(lagBench.asesor(d.propietario));
+        const lagG = Math.round(lagBench.global);
+        const max = Math.max(Math.abs(lagThis), Math.abs(lagZ), Math.abs(lagA), Math.abs(lagG), 1);
+
+        // Color del deal según semáforo (>90 rojo, >30 naranja, else verde; <0 azul)
+        const thisColor = lagThis < 0 ? '#5b9bd5' : lagThis > 90 ? '#c44e4e' : lagThis > 30 ? '#c48a4a' : '#4a9982';
+        const benchColor = '#7fb4dc';
+
+        const row = (label, val, color, isThis) => {
+            const pct = Math.min(100, (Math.abs(val) / max) * 100);
+            const sign = val > 0 ? '+' : '';
+            return '<div class="v5-lagcmp-row' + (isThis ? ' this-deal' : '') + '">' +
+                '<span class="lbl" title="' + escapeHtml(label) + '">' + escapeHtml(label) + '</span>' +
+                '<div class="bar-wrap"><div class="bar" style="width:' + pct.toFixed(0) + '%; background:' + color + '"></div></div>' +
+                '<span class="val" style="color:' + color + '">' + sign + val + 'd</span>' +
+            '</div>';
+        };
+
+        return '<div class="v5-lagcmp">' +
+            '<div class="v5-section-label"><span>Lag Venta → Inicio</span><span class="meta">días desde cierre ganado hasta inicio proyecto</span></div>' +
+            row('Este proyecto', lagThis, thisColor, true) +
+            row('VPAF', lagG, benchColor, false) +
+            row('Zona (' + (d.zona || '—') + ')', lagZ, benchColor, false) +
+            row('Asesor (' + (d.propietario || '—') + ')', lagA, benchColor, false) +
+        '</div>';
+    }
+
+    function sumImporte(arr) {
+        return arr.reduce((s, d) => s + d.importe, 0);
+    }
+
+    // ============ Bucket filters (Lag venta / Días movimiento) ============
+    // Usan el valor absoluto — un proyecto que se movió -45d sigue contando como 30-60d.
+    function bucketMatches(value, bucket) {
+        if (value == null || isNaN(value)) return false;
+        const v = Math.abs(value);
+        switch (bucket) {
+            case '0-30':   return v >= 0   && v < 30;
+            case '30-60':  return v >= 30  && v < 60;
+            case '60-90':  return v >= 60  && v < 90;
+            case '90-180': return v >= 90  && v < 180;
+            case '>180':   return v >= 180;
+            default: return true;
+        }
+    }
+
+    function filterLagBucket(bucket) {
+        lagBucket = (lagBucket === bucket) ? null : bucket;
+        updateBucketChipsUI();
+        renderDashboard();
+    }
+
+    function filterMovBucket(bucket) {
+        movBucket = (movBucket === bucket) ? null : bucket;
+        updateBucketChipsUI();
+        renderDashboard();
+    }
+
+    function filterCountBucket(bucket) {
+        countBucket = (countBucket === bucket) ? null : bucket;
+        updateBucketChipsUI();
+        renderDashboard();
+    }
+
+    function countMatches(n, bucket) {
+        if (n == null || isNaN(n)) return false;
+        switch (bucket) {
+            case 'sin': return n === 0;
+            case '1':   return n === 1;
+            case '2':   return n === 2;
+            case '3':   return n === 3;
+            case '4':   return n === 4;
+            case '>4':  return n > 4;
+            default: return true;
+        }
+    }
+
+    function updateBucketChipsUI() {
+        document.querySelectorAll('.bucket-chip').forEach(c => {
+            const g = c.getAttribute('data-group');
+            const b = c.getAttribute('data-bucket');
+            const active = (g === 'lag' && lagBucket === b)
+                || (g === 'mov' && movBucket === b)
+                || (g === 'count' && countBucket === b);
+            c.classList.toggle('selected', active);
+        });
+    }
+
+    function updateBucketCounts() {
+        // Para cada grupo, calcular contadores IGNORANDO su propio filtro
+        // (así los chips muestran "qué pasaría si selecciono esto", combinable con el resto).
+        ['lag', 'mov', 'count'].forEach(group => {
+            let saved;
+            if (group === 'lag')   { saved = lagBucket;   lagBucket = null; }
+            if (group === 'mov')   { saved = movBucket;   movBucket = null; }
+            if (group === 'count') { saved = countBucket; countBucket = null; }
+            const data = getFilteredData();
+            if (group === 'lag')   lagBucket = saved;
+            if (group === 'mov')   movBucket = saved;
+            if (group === 'count') countBucket = saved;
+
+            document.querySelectorAll('.bucket-chip[data-group="' + group + '"]').forEach(chip => {
+                const b = chip.getAttribute('data-bucket');
+                let matches;
+                if (group === 'lag')   matches = data.filter(d => bucketMatches(d.diasVentaInicio, b));
+                else if (group === 'mov')   matches = data.filter(d => bucketMatches(d.diasInicio, b));
+                else                        matches = data.filter(d => countMatches(d.cambiosInicio, b));
+                const cnt = matches.length;
+                const imp = sumImporte(matches);
+                const cntEl = chip.querySelector('.chip-count');
+                const impEl = chip.querySelector('.chip-imp');
+                if (cntEl) cntEl.textContent = cnt.toLocaleString();
+                if (impEl) impEl.textContent = imp > 0 ? '$' + (imp / 1e6).toFixed(1) + 'M' : '$0';
+            });
+        });
+    }
+
+    async function loadData() {
+        try {
+            const response = await fetch('Monitoreo_FechasProyecto.csv?t=' + Date.now());
+            const text = await response.text();
+            const lines = text.trim().split('\n');
+            const headers = lines[0].split(',');
+
+            function parseCSVLine(line) {
+                // Soporta el escape CSV estándar: "" dentro de un campo quoteado representa un " literal.
+                // Necesario para columnas con JSON (ej. HistorialCambiosInicio).
+                const result = [];
+                let current = '';
+                let inQuotes = false;
+                for (let i = 0; i < line.length; i++) {
+                    const ch = line[i];
+                    if (ch === '"') {
+                        if (inQuotes && line[i + 1] === '"') { current += '"'; i++; }
+                        else { inQuotes = !inQuotes; }
+                    } else if (ch === ',' && !inQuotes) { result.push(current); current = ''; }
+                    else { current += ch; }
+                }
+                result.push(current);
+                return result;
+            }
+
+            const hdrs = parseCSVLine(lines[0]);
+            const idx = {};
+            hdrs.forEach((h, i) => idx[h.replace(/^\uFEFF/, '').trim()] = i);
+
+            allData = lines.slice(1).map(line => {
+                const values = parseCSVLine(line);
+                return {
+                    id: values[idx['IdOportunidad']] || '',
+                    cambiosInicio: parseInt(values[idx['CambiosInicioEjecucion']]) || 0,
+                    cambiosTermino: parseInt(values[idx['CambiosTerminoEjecucion']]) || 0,
+                    ceco: values[idx['CECO']] || '',
+                    importe: parseFloat(values[idx['Importe']]) || 0,
+                    iniciado: values[idx['Iniciado']] || '',
+                    tieneCECO: values[idx['TieneCECO']] || '',
+                    riesgo: values[idx['Riesgo']] || '',
+                    riesgoAsertividad: values[idx['RiesgoAsertividad']] || '',
+                    diasHastaCambio: parseFloat(values[idx['DiasHastaPrimerCambioInicio']]) || 0,
+                    diasInicio: parseFloat(values[idx['DiferenciaInicio_Dias']]) || 0,
+                    diasTermino: parseFloat(values[idx['DiferenciaTermino_Dias']]) || 0,
+                    primerInicio: values[idx['PrimerInicioRegistrado']] || '',
+                    ultimoInicio: values[idx['UltimoInicioRegistrado']] || '',
+                    fechaCierre: values[idx['FechaCierreGroup']] || '',
+                    diasVentaInicio: (values[idx['DiasVentaInicio']] === '' || values[idx['DiasVentaInicio']] === undefined) ? null : parseInt(values[idx['DiasVentaInicio']]),
+                    historialCambiosInicio: (() => {
+                        try { return JSON.parse(values[idx['HistorialCambiosInicio']] || '[]'); }
+                        catch(e) { return []; }
+                    })(),
+                    zona: values[idx['ZonaAgrupada']] || '',
+                    propietario: values[idx['PropietarioOportunidad']] || '',
+                    propietarioEmail: values[idx['EmailPropietario']] || '',
+                    nombrePrincipal: values[idx['NombrePrincipal']] || '',
+                    nombreOportunidad: values[idx['NombreOportunidad']] || '',
+                    proyecto: values[idx['Proyecto']] || ''
+                };
+            });
+
+            buildZonaBar();
+            renderDashboard();
+        } catch (e) {
+            console.error('Error cargando CSV:', e);
+            document.getElementById('kpi-total').textContent = 'Error';
+        }
+    }
+
+    function buildZonaBar() {
+        const zonas = {};
+        allData.forEach(d => {
+            if (!zonas[d.zona]) zonas[d.zona] = { count: 0, importe: 0, impRiesgo: 0, asertBajo: 0, asertMedio: 0, asertAlto: 0 };
+            const z = zonas[d.zona];
+            z.count++;
+            z.importe += d.importe;
+            if (d.riesgo === 'Alto' || d.riesgo === 'Medio') z.impRiesgo += d.importe;
+            if (d.riesgoAsertividad && d.riesgoAsertividad.startsWith('Bajo')) z.asertBajo++;
+            else if (d.riesgoAsertividad && d.riesgoAsertividad.startsWith('Medio')) z.asertMedio++;
+            else if (d.riesgoAsertividad && d.riesgoAsertividad.startsWith('Alto')) z.asertAlto++;
+        });
+        const sorted = Object.entries(zonas).sort((a, b) => b[1].importe - a[1].importe);
+        const bar = document.getElementById('zona-bar');
+
+        function zonaCard(name, info, onclick) {
+            const impSano = info.importe - info.impRiesgo;
+            const pctR = info.importe > 0 ? (info.impRiesgo / info.importe * 100).toFixed(0) : 0;
+            const pctS = info.importe > 0 ? (impSano / info.importe * 100).toFixed(0) : 100;
+            const riskSeg = pctR > 0 ? `<div class="bar-risk" style="width:${pctR}%; min-width:32px;" title="Riesgo: ${fmtMoney(info.impRiesgo)} (${pctR}%)">${pctR}%</div>` : '';
+            const safeSeg = pctS > 0 ? `<div class="bar-safe" style="width:${pctS}%; min-width:32px;" title="Sano: ${fmtMoney(impSano)} (${pctS}%)">${pctS}%</div>` : '';
+
+            const asertSin = info.count - (info.asertBajo + info.asertMedio + info.asertAlto);
+            let asertBar = '';
+            if (info.count > 0) {
+                const pS = (asertSin / info.count * 100).toFixed(0);
+                const pB = (info.asertBajo / info.count * 100).toFixed(0);
+                const pM = (info.asertMedio / info.count * 100).toFixed(0);
+                const pA = (info.asertAlto / info.count * 100).toFixed(0);
+                const seg = (pct, cls, label, count) => pct > 0
+                    ? `<div class="${cls}" style="width:${pct}%; min-width:32px;" title="${label}: ${count} proyecto${count === 1 ? '' : 's'} (${pct}%)">${pct}%</div>`
+                    : '';
+                asertBar = `${seg(pS, 'bar-asert-sin', 'Sin cambios', asertSin)}${seg(pB, 'bar-asert-bajo', 'Bajo 0-14d', info.asertBajo)}${seg(pM, 'bar-asert-medio', 'Medio 15-30d', info.asertMedio)}${seg(pA, 'bar-asert-alto', 'Alto >30d', info.asertAlto)}`;
+            }
+
+            const impMM = (info.importe / 1_000_000).toFixed(1);
+            return `<div class="zona-btn" onclick="${onclick}">
+                <div class="zona-header">
+                    <div class="zona-name">${name}</div>
+                    <div class="zona-total-imp" title="Importe total de ventas: ${fmtMoney(info.importe)}">$${impMM} MDP</div>
+                </div>
+                <div class="zona-bar-caption">Salud comercial (importe)</div>
+                <div class="balance-bar">${riskSeg}${safeSeg}</div>
+                <div class="zona-bar-caption">Asertividad (${info.count})</div>
+                <div class="balance-bar bar-asert">${asertBar}</div>
+            </div>`;
+        }
+
+        const totalInfo = { count: allData.length, importe: sumImporte(allData), impRiesgo: sumImporte(allData.filter(d => d.riesgo === 'Alto' || d.riesgo === 'Medio')),
+            asertBajo: allData.filter(d => d.riesgoAsertividad && d.riesgoAsertividad.startsWith('Bajo')).length,
+            asertMedio: allData.filter(d => d.riesgoAsertividad && d.riesgoAsertividad.startsWith('Medio')).length,
+            asertAlto: allData.filter(d => d.riesgoAsertividad && d.riesgoAsertividad.startsWith('Alto')).length };
+
+        let html = zonaCard('TODAS', totalInfo, "filterZona(null)");
+        sorted.forEach(([zona, info]) => {
+            html += zonaCard(zona, info, `filterZona('${zona}')`);
+        });
+        bar.innerHTML = html;
+        // Mark active
+        bar.querySelector('.zona-btn').classList.add('zona-active');
+    }
+
+    function filterZona(zona) {
+        if (zona === null) {
+            // Clic en "TODAS" → limpiar selección
+            zonaFilter.clear();
+        } else {
+            // Toggle de la zona en el Set
+            if (zonaFilter.has(zona)) zonaFilter.delete(zona);
+            else zonaFilter.add(zona);
+        }
+        // Asesor seleccionado ya no aplica si su zona no está en la selección activa
+        if (asesorFilter) {
+            const asesorZona = allData.find(d => d.propietario === asesorFilter)?.zona;
+            if (zonaFilter.size > 0 && asesorZona && !zonaFilter.has(asesorZona)) {
+                asesorFilter = null;
+                projectFilter = null;
+            }
+        }
+        clearAllSelections();
+        updateZonaActiveUI();
+        renderDashboard();
+    }
+
+    function updateZonaActiveUI() {
+        document.querySelectorAll('.zona-btn').forEach((b, i) => {
+            b.classList.remove('zona-active');
+            if (i === 0) {
+                // "TODAS" activo solo si no hay zonas seleccionadas
+                if (zonaFilter.size === 0) b.classList.add('zona-active');
+            } else {
+                const name = b.querySelector('.zona-name')?.textContent;
+                if (name && zonaFilter.has(name)) b.classList.add('zona-active');
+            }
+        });
+    }
+
+    function renderDashboard() {
+        // KPIs reflejan zona y asesor seleccionado
+        let baseData = zonaFilter.size > 0 ? allData.filter(d => zonaFilter.has(d.zona)) : allData;
+        if (asesorFilter) baseData = baseData.filter(d => d.propietario === asesorFilter);
+        const dAltoG = baseData.filter(d => d.riesgo === 'Alto');
+        const dMedioG = baseData.filter(d => d.riesgo === 'Medio');
+        const dNuloG = baseData.filter(d => d.riesgo === 'Nulo');
+        const dConCambiosG = baseData.filter(d => d.cambiosInicio > 0);
+
+        document.getElementById('kpi-total').textContent = baseData.length.toLocaleString();
+        document.getElementById('kpi-total-imp').textContent = fmtMoney(sumImporte(baseData));
+        document.getElementById('kpi-alto').textContent = dAltoG.length.toLocaleString();
+        document.getElementById('kpi-alto-imp').textContent = fmtMoney(sumImporte(dAltoG));
+        document.getElementById('kpi-medio').textContent = dMedioG.length.toLocaleString();
+        document.getElementById('kpi-medio-imp').textContent = fmtMoney(sumImporte(dMedioG));
+        document.getElementById('kpi-cambios-inicio').textContent = dConCambiosG.length.toLocaleString();
+        document.getElementById('kpi-cambios-imp').textContent = fmtMoney(sumImporte(dConCambiosG));
+        if (dConCambiosG.length > 0) {
+            const diasArr = dConCambiosG.map(d => d.diasHastaCambio).sort((a,b) => a - b);
+            const promedio = (diasArr.reduce((s,v) => s + v, 0) / diasArr.length).toFixed(0);
+            const mediana = diasArr.length % 2 === 0
+                ? ((diasArr[diasArr.length/2 - 1] + diasArr[diasArr.length/2]) / 2).toFixed(0)
+                : diasArr[Math.floor(diasArr.length/2)].toFixed(0);
+            document.getElementById('kpi-cambios-stats').innerHTML = `Prom: ${promedio}d | Med: ${mediana}d`;
+        } else {
+            document.getElementById('kpi-cambios-stats').innerHTML = '--';
+        }
+        document.getElementById('kpi-ok').textContent = dNuloG.length.toLocaleString();
+        document.getElementById('kpi-ok-imp').textContent = fmtMoney(sumImporte(dNuloG));
+
+        // % riesgo KPI
+        const impTotalG = sumImporte(baseData);
+        const impRiesgoG = sumImporte(dAltoG) + sumImporte(dMedioG);
+        const pctG = impTotalG > 0 ? ((impRiesgoG / impTotalG) * 100).toFixed(1) : 0;
+        const pctColor = pctG > 20 ? '#c44e4e' : pctG > 10 ? '#c48a4a' : '#4a9982';
+        document.getElementById('kpi-pct-riesgo').textContent = pctG + '%';
+        document.getElementById('kpi-pct-riesgo').style.color = pctColor;
+        document.getElementById('kpi-pct-detail').textContent = `${fmtMoney(impRiesgoG)} de ${fmtMoney(impTotalG)}`;
+
+        // Todos los demás componentes usan datos filtrados
+        const fd = getFilteredData();
+
+        // Matrix
+        const dIniciSinCECO = fd.filter(d => d.iniciado === 'Si' && d.tieneCECO === 'No');
+        const dIniciConCECO = fd.filter(d => d.iniciado === 'Si' && d.tieneCECO === 'Si');
+        const dNoIniciSinCECO = fd.filter(d => d.iniciado === 'No' && d.tieneCECO === 'No');
+        const dNoIniciConCECO = fd.filter(d => d.iniciado === 'No' && d.tieneCECO === 'Si');
+        document.getElementById('mat-alto').textContent = dIniciSinCECO.length.toLocaleString();
+        document.getElementById('mat-ok').textContent = dIniciConCECO.length.toLocaleString();
+        document.getElementById('mat-nulo').textContent = dNoIniciSinCECO.length.toLocaleString();
+        document.getElementById('mat-medio').textContent = dNoIniciConCECO.length.toLocaleString();
+        document.getElementById('mat-alto-imp').textContent = fmtMoney(sumImporte(dIniciSinCECO));
+        document.getElementById('mat-ok-imp').textContent = fmtMoney(sumImporte(dIniciConCECO));
+        document.getElementById('mat-nulo-imp').textContent = fmtMoney(sumImporte(dNoIniciSinCECO));
+        document.getElementById('mat-medio-imp').textContent = fmtMoney(sumImporte(dNoIniciConCECO));
+
+        // Asertividad
+        const aSin = fd.filter(d => !d.riesgoAsertividad || d.riesgoAsertividad.startsWith('Sin'));
+        const aBajo = fd.filter(d => d.riesgoAsertividad && d.riesgoAsertividad.startsWith('Bajo'));
+        const aMedio = fd.filter(d => d.riesgoAsertividad && d.riesgoAsertividad.startsWith('Medio'));
+        const aAlto = fd.filter(d => d.riesgoAsertividad && d.riesgoAsertividad.startsWith('Alto'));
+        document.getElementById('asert-sin-n').textContent = aSin.length;
+        document.getElementById('asert-sin-imp').textContent = fmtMoney(sumImporte(aSin));
+        document.getElementById('asert-bajo-n').textContent = aBajo.length;
+        document.getElementById('asert-bajo-imp').textContent = fmtMoney(sumImporte(aBajo));
+        document.getElementById('asert-medio-n').textContent = aMedio.length;
+        document.getElementById('asert-medio-imp').textContent = fmtMoney(sumImporte(aMedio));
+        document.getElementById('asert-alto-n').textContent = aAlto.length;
+        document.getElementById('asert-alto-imp').textContent = fmtMoney(sumImporte(aAlto));
+
+        // Insights - basados en datos filtrados
+        const dAlto = fd.filter(d => d.riesgo === 'Alto');
+        const dMedio = fd.filter(d => d.riesgo === 'Medio');
+        const altoConCambios = fd.filter(d => d.riesgo === 'Alto' && d.cambiosInicio > 0);
+        const medioConCambios = fd.filter(d => d.riesgo === 'Medio' && d.cambiosInicio > 0);
+        const impTotal = sumImporte(fd);
+        const impRiesgo = sumImporte(dAlto) + sumImporte(dMedio);
+        const pctRiesgo = impTotal > 0 ? ((impRiesgo / impTotal) * 100).toFixed(1) : 0;
+
+        document.getElementById('insight-1').innerHTML = `<strong>${dAlto.length}</strong> proyectos riesgo Alto representan <strong>${fmtMoney(sumImporte(dAlto))}</strong>. De estos, <strong>${altoConCambios.length}</strong> ademas movieron su fecha de inicio (<strong>${fmtMoney(sumImporte(altoConCambios))}</strong>).`;
+        document.getElementById('insight-2').innerHTML = `<strong>${dMedio.length}</strong> proyectos riesgo Medio representan <strong>${fmtMoney(sumImporte(dMedio))}</strong>. <strong>${medioConCambios.length}</strong> de ellos cambiaron fecha de inicio (<strong>${fmtMoney(sumImporte(medioConCambios))}</strong>).`;
+
+        const topImporte = [...dAlto, ...dMedio].sort((a, b) => b.importe - a.importe).slice(0, 3);
+        if (topImporte.length > 0) {
+            const topList = topImporte.map(d => `<div style="margin:6px 0;"><a href="https://micrmtec.lightning.force.com/lightning/r/Opportunity/${d.id}/view" target="_blank" style="color:#7fb4dc; text-decoration:none; font-weight:700;">${d.id.substring(0,18)}</a> <span style="color:#7a8fa6;">(${fmtMoney(d.importe)})</span></div>`).join('');
+            document.getElementById('insight-3').innerHTML = `Top proyectos en riesgo por importe:${topList}`;
+        } else {
+            document.getElementById('insight-3').innerHTML = `No hay proyectos en riesgo Alto o Medio en esta seleccion.`;
+        }
+
+        document.getElementById('insight-4').innerHTML = `El <strong>${pctRiesgo}%</strong> del importe filtrado (<strong>${fmtMoney(impRiesgo)}</strong> de <strong>${fmtMoney(impTotal)}</strong>) se encuentra en riesgo Alto o Medio.`;
+
+        renderActiveFilters();
+        renderAsesores(fd);
+        renderProyectos(fd);
+        renderCharts(fd);
+        updateBucketCounts();
+    }
+
+    function renderActiveFilters() {
+        const bar = document.getElementById('active-filters-bar');
+        if (!bar) return;
+        const chips = [];
+        if (zonaFilter.size > 0) {
+            zonaFilter.forEach(z => {
+                chips.push(`<span class="afchip"><span class="afchip-type">Zona</span>${escapeHtml(z)}<span class="afchip-x" onclick="filterZona('${z.replace(/'/g, "\\'")}')" title="Quitar filtro">✕</span></span>`);
+            });
+        }
+        if (asesorFilter) {
+            chips.push(`<span class="afchip"><span class="afchip-type">Asesor</span>${escapeHtml(asesorFilter)}<span class="afchip-x" onclick="filterByAsesor('${asesorFilter.replace(/'/g, "\\'")}')" title="Quitar filtro">✕</span></span>`);
+        }
+        if (kpiFilter) {
+            const labelMap = { Alto: 'Riesgo Alto', Medio: 'Riesgo Medio', Nulo: 'Sanos', ConCambios: 'Movieron fecha', Todos: 'Total' };
+            chips.push(`<span class="afchip"><span class="afchip-type">KPI</span>${escapeHtml(labelMap[kpiFilter] || kpiFilter)}<span class="afchip-x" onclick="filterKpi('${kpiFilter}')" title="Quitar filtro">✕</span></span>`);
+        }
+        if (matrixFilter) {
+            const txt = `${matrixFilter.iniciado === 'Si' ? 'Iniciado' : 'No iniciado'} · ${matrixFilter.ceco === 'Si' ? 'Con CECO' : 'Sin CECO'}`;
+            chips.push(`<span class="afchip"><span class="afchip-type">Matriz</span>${escapeHtml(txt)}<span class="afchip-x" onclick="filterMatrix('${matrixFilter.iniciado}','${matrixFilter.ceco}')" title="Quitar filtro">✕</span></span>`);
+        }
+        if (asertFilter) {
+            const labelMap = { Sin: 'Sin cambios', Bajo: 'Asertividad Bajo (0-14d)', Medio: 'Asertividad Medio (15-30d)', Alto: 'Asertividad Alto (>30d)' };
+            chips.push(`<span class="afchip"><span class="afchip-type">Asertividad</span>${escapeHtml(labelMap[asertFilter] || asertFilter)}<span class="afchip-x" onclick="filterAsertividad('${asertFilter}')" title="Quitar filtro">✕</span></span>`);
+        }
+        if (projectFilter) {
+            const proj = allData.find(d => d.id === projectFilter);
+            const projLabel = proj ? proj.proyecto : projectFilter;
+            const shortLabel = projLabel.length > 40 ? projLabel.substring(0, 40) + '…' : projLabel;
+            chips.push(`<span class="afchip"><span class="afchip-type">Proyecto</span>${escapeHtml(shortLabel)}<span class="afchip-x" onclick="filterByProyecto('${projectFilter}')" title="Quitar filtro">✕</span></span>`);
+        }
+        if (lagBucket) {
+            chips.push(`<span class="afchip"><span class="afchip-type">Lag venta</span>${lagBucket}d<span class="afchip-x" onclick="filterLagBucket('${lagBucket}')" title="Quitar filtro">✕</span></span>`);
+        }
+        if (movBucket) {
+            chips.push(`<span class="afchip"><span class="afchip-type">Dias mov.</span>${movBucket}d<span class="afchip-x" onclick="filterMovBucket('${movBucket}')" title="Quitar filtro">✕</span></span>`);
+        }
+        if (countBucket) {
+            let countLabel;
+            if (countBucket === 'sin') countLabel = 'Sin movimientos';
+            else if (countBucket === '1') countLabel = '1 movimiento';
+            else if (countBucket === '>4') countLabel = '>4 movimientos';
+            else countLabel = countBucket + ' movimientos';
+            chips.push(`<span class="afchip"><span class="afchip-type">Cant. mov.</span>${escapeHtml(countLabel)}<span class="afchip-x" onclick="filterCountBucket('${countBucket}')" title="Quitar filtro">✕</span></span>`);
+        }
+        if (chips.length === 0) {
+            bar.style.display = 'none';
+            bar.innerHTML = '';
+            return;
+        }
+        bar.style.display = 'flex';
+        bar.innerHTML = `<span class="aflabel">Filtros activos:</span>${chips.join('')}<span class="afclear" onclick="clearAllFiltersAndRender()">Limpiar todo ✕</span>`;
+    }
+
+    function clearAllFiltersAndRender() {
+        zonaFilter.clear();
+        asesorFilter = null;
+        projectFilter = null;
+        lagBucket = null;
+        movBucket = null;
+        countBucket = null;
+        updateBucketChipsUI();
+        clearAllSelections();
+        updateZonaActiveUI();
+        renderDashboard();
+    }
+
+    function renderAsesores(fd) {
+        const today = new Date();
+        today.setHours(0,0,0,0);
+
+        // Group projects by asesor, only those with riesgo Alto/Medio or cambios
+        const asesores = {};
+        fd.forEach(d => {
+            const key = d.propietario;
+            if (!key) return;
+            if (!asesores[key]) asesores[key] = { email: d.propietarioEmail, zona: d.zona, total: 0, importe: 0, impRiesgo: 0, alto: 0, medio: 0, nulo: 0, totalCambios: 0, asertBajo: 0, asertMedio: 0, asertAlto: 0, proyectos: [] };
+            const a = asesores[key];
+            a.total++;
+            a.importe += d.importe;
+            if (d.riesgo === 'Alto') { a.alto++; a.impRiesgo += d.importe; }
+            else if (d.riesgo === 'Medio') { a.medio++; a.impRiesgo += d.importe; }
+            else { a.nulo++; }
+            a.totalCambios += d.cambiosInicio;
+            if (d.riesgoAsertividad && d.riesgoAsertividad.startsWith('Bajo')) a.asertBajo++;
+            else if (d.riesgoAsertividad && d.riesgoAsertividad.startsWith('Medio')) a.asertMedio++;
+            else if (d.riesgoAsertividad && d.riesgoAsertividad.startsWith('Alto')) a.asertAlto++;
+            a.proyectos.push(d);
+        });
+
+        // All asesores: first those with risk (sorted by impRiesgo desc), then the rest (sorted by importe desc)
+        const conRiesgo = Object.entries(asesores)
+            .filter(([,a]) => a.impRiesgo > 0 || a.totalCambios > 0)
+            .sort((a, b) => b[1].impRiesgo - a[1].impRiesgo);
+        const sinRiesgo = Object.entries(asesores)
+            .filter(([,a]) => a.impRiesgo === 0 && a.totalCambios === 0)
+            .sort((a, b) => b[1].importe - a[1].importe);
+        const sorted = [...conRiesgo, ...sinRiesgo];
+
+        const html = sorted.map(([name, a], idx) => {
+            const photoUrl = a.email ? `https://tecmx.sharepoint.com/_layouts/15/userphoto.aspx?accountname=${encodeURIComponent(a.email)}&size=S` : '';
+            const photoHtml = photoUrl ? `<img class="asesor-photo" src="${photoUrl}" onerror="this.style.display='none'">` : '<div class="asesor-photo"></div>';
+
+            const hasRisk = a.impRiesgo > 0 || a.totalCambios > 0;
+            const riskColor = a.impRiesgo > 0 ? '#c44e4e' : '#6b7280';
+            const cambiosColor = a.totalCambios > 0 ? '#c48a4a' : '#6b7280';
+            const impSano = a.importe - a.impRiesgo;
+
+            // Detail rows
+            const proyRiesgo = a.proyectos.filter(d => d.riesgo === 'Alto' || d.riesgo === 'Medio').sort((x,y) => y.importe - x.importe);
+            const proySanos = a.proyectos.filter(d => d.riesgo === 'Nulo').sort((x,y) => y.importe - x.importe);
+
+            function buildRow(d, isRiesgo) {
+                const rowBg = isRiesgo ? 'background:rgba(196,78,78,0.04);' : 'background:rgba(74,153,130,0.04);';
+                const rBadge = d.riesgo === 'Alto' ? 'badge-alto' : d.riesgo === 'Medio' ? 'badge-medio' : 'badge-nulo';
+                let asertBadge = 'badge-sinc';
+                if (d.riesgoAsertividad.startsWith('Bajo')) asertBadge = 'badge-abajo';
+                else if (d.riesgoAsertividad.startsWith('Medio')) asertBadge = 'badge-amedio';
+                else if (d.riesgoAsertividad.startsWith('Alto')) asertBadge = 'badge-aalto';
+
+                // Days since/until start
+                let daysColLabel = 'Dias inicio';
+                let daysColVal = '-';
+                if (d.ultimoInicio) {
+                    const start = new Date(d.ultimoInicio);
+                    const diff = Math.floor((today - start) / 86400000);
+                    if (diff >= 0) {
+                        daysColLabel = 'Dias desde inicio';
+                        daysColVal = `<span style="color:#a0b4c8">${diff}d</span>`;
+                    } else {
+                        daysColLabel = 'Dias para inicio';
+                        daysColVal = `<span style="color:#7fb4dc">${Math.abs(diff)}d</span>`;
+                    }
+                }
+
+                // Dias movidos con semaforo
+                const absDiasMov = Math.abs(d.diasInicio);
+                const diasMovColor = d.cambiosInicio > 0 ? (absDiasMov > 60 ? '#c44e4e' : absDiasMov > 30 ? '#c48a4a' : '#4a9982') : '#6b7280';
+                const diasCambioStr = d.cambiosInicio > 0 ? d.diasHastaCambio : '-';
+                const projName = d.proyecto.length > 50 ? d.proyecto.substring(0,50) + '...' : d.proyecto;
+
+                const safeProjName = escapeHtml(projName);
+                const safeProjFull = escapeHtml(d.proyecto);
+                const safeId = encodeURIComponent(d.id);
+                const isProjSelected = projectFilter === d.id;
+                const selBg = isProjSelected ? 'background:rgba(91,155,213,0.18); outline:1px solid #5b9bd5;' : rowBg;
+                // Pill de Lag venta con semaforo (verde ≤30, naranja 31-90, rojo >90)
+                let lagVentaCell = '<span style="color:#6b7280">-</span>';
+                if (d.diasVentaInicio != null) {
+                    const absLag = Math.abs(d.diasVentaInicio);
+                    const lagColor = absLag > 90 ? '#c44e4e' : absLag > 30 ? '#c48a4a' : '#4a9982';
+                    const sign = d.diasVentaInicio > 0 ? '+' : '';
+                    lagVentaCell = `<span class="days-pill" style="background:${lagColor}28;color:${lagColor};">${sign}${d.diasVentaInicio}d</span>`;
+                }
+                return `<tr style="${selBg} cursor:pointer;" onclick="filterByProyecto('${d.id}')" title="Clic para ver solo este proyecto a la derecha">
+                    <td style="max-width:210px;" title="${safeProjFull}"><a href="https://micrmtec.lightning.force.com/lightning/r/Opportunity/${safeId}/view" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" style="color:#7fb4dc;text-decoration:none">${safeProjName}</a></td>
+                    <td style="text-align:right" title="${fmtMoneyFull(d.importe)}">${fmtMoneyCompact(d.importe)}</td>
+                    <td style="text-align:center"><span class="badge-${d.iniciado === 'Si' ? 'si' : 'no'}">${d.iniciado}</span></td>
+                    <td style="text-align:center"><span class="badge-${d.tieneCECO === 'Si' ? 'si' : 'no'}">${d.tieneCECO}</span></td>
+                    <td style="text-align:center">${lagVentaCell}</td>
+                    <td style="text-align:center">${d.cambiosInicio}</td>
+                    <td style="text-align:center">${diasCambioStr}</td>
+                    <td style="text-align:center">${d.cambiosInicio > 0 && d.primerInicio && d.primerInicio !== d.ultimoInicio ? `<div style="font-size:10px;color:#556778;text-decoration:line-through;">${fmtDate(d.primerInicio)}</div><div>${fmtDate(d.ultimoInicio)}</div>` : fmtDate(d.ultimoInicio)}</td>
+                    <td style="text-align:center">${d.cambiosInicio > 0 ? `<span class="days-pill" style="background:${diasMovColor}28;color:${diasMovColor};">${d.diasInicio > 0 ? '+' : ''}${d.diasInicio}d</span>` : '<span style="color:#6b7280">0</span>'}</td>
+                    <td style="text-align:center">${daysColVal}</td>
+                    <td><span class="badge ${asertBadge}" style="font-size:10px">${d.riesgoAsertividad}</span></td>
+                    <td><span class="badge ${rBadge}">${d.riesgo}</span></td>
+                </tr>`;
+            }
+
+            const riesgoRows = proyRiesgo.map(d => buildRow(d, true)).join('');
+            const sanoRows = proySanos.map(d => buildRow(d, false)).join('');
+            const detailRows = (proyRiesgo.length > 0 ? `<tr><td colspan="12" style="padding:8px;font-size:11px;font-weight:600;color:#c44e4e;text-transform:uppercase;background:rgba(196,78,78,0.05);border-bottom:1px solid #2d4a5e;">En Riesgo (${proyRiesgo.length})</td></tr>${riesgoRows}` : '') +
+                (proySanos.length > 0 ? `<tr><td colspan="12" style="padding:8px;font-size:11px;font-weight:600;color:#4a9982;text-transform:uppercase;background:rgba(74,153,130,0.05);border-bottom:1px solid #2d4a5e;">Sin Riesgo (${proySanos.length})</td></tr>${sanoRows}` : '');
+
+            const selClass = (asesorFilter === name) ? ' is-selected' : '';
+            const openClass = openAsesores.has(name) ? ' open' : '';
+            return `<div class="asesor-card${selClass}${openClass}" id="asesor-${idx}">
+                <div class="asesor-card-header" onclick="filterByAsesor('${name.replace(/'/g, "\\'")}')">
+                    ${photoHtml}
+                    <div class="asesor-id-block">
+                        <div class="asesor-name">${name}</div>
+                        <div class="asesor-subtitle">${a.zona}</div>
+                    </div>
+                    <div class="asesor-kpis">
+                        <div class="asesor-kpi">
+                            <div class="asesor-kpi-label">En Riesgo</div>
+                            <div class="asesor-kpi-val" style="color:#c44e4e">${a.alto + a.medio}</div>
+                        </div>
+                        <div class="asesor-kpi">
+                            <div class="asesor-kpi-label">Imp. Riesgo</div>
+                            <div class="asesor-kpi-val" style="color:${riskColor}">${fmtMoney(a.impRiesgo)}</div>
+                        </div>
+                        <div class="asesor-kpi">
+                            <div class="asesor-kpi-label">Sanos</div>
+                            <div class="asesor-kpi-val" style="color:#4a9982">${a.nulo}</div>
+                        </div>
+                        <div class="asesor-kpi">
+                            <div class="asesor-kpi-label">Imp. Sano</div>
+                            <div class="asesor-kpi-val" style="color:#4a9982">${fmtMoney(impSano)}</div>
+                        </div>
+                        <div class="asesor-kpi">
+                            <div class="asesor-kpi-label">Cambios</div>
+                            <div class="asesor-kpi-val" style="color:${cambiosColor}">${a.totalCambios}</div>
+                        </div>
+                        <div class="asesor-kpi">
+                            <div class="asesor-kpi-label">Imp. Total</div>
+                            <div class="asesor-kpi-val" style="color:#7fb4dc">${fmtMoney(a.importe)}</div>
+                        </div>
+                    </div>
+                    <div class="asesor-expand" onclick="event.stopPropagation(); toggleAsesorOpen('${name.replace(/'/g, "\\'")}')">&#9660;</div>
+                    <div class="asesor-bars-row">
+                        ${(() => {
+                            const pctR = a.importe > 0 ? (a.impRiesgo / a.importe * 100).toFixed(0) : 0;
+                            const pctS = a.importe > 0 ? (impSano / a.importe * 100).toFixed(0) : 100;
+                            const riskSeg = pctR > 0 ? `<div class="bar-risk" style="width:${pctR}%; min-width:32px;" title="Riesgo: ${fmtMoney(a.impRiesgo)} (${pctR}%)">${pctR}%</div>` : '';
+                            const safeSeg = pctS > 0 ? `<div class="bar-safe" style="width:${pctS}%; min-width:32px;" title="Sano: ${fmtMoney(impSano)} (${pctS}%)">${pctS}%</div>` : '';
+                            return `<div class="asesor-bar-block">
+                                <div class="bar-caption">Salud comercial (importe)</div>
+                                <div class="balance-bar">${riskSeg}${safeSeg}</div>
+                            </div>`;
+                        })()}
+                        ${(() => {
+                            const asertSin = a.total - (a.asertBajo + a.asertMedio + a.asertAlto);
+                            if (a.total === 0) return '<div class="asesor-bar-block"></div>';
+                            const pctS = (asertSin / a.total * 100).toFixed(0);
+                            const pctB = (a.asertBajo / a.total * 100).toFixed(0);
+                            const pctM = (a.asertMedio / a.total * 100).toFixed(0);
+                            const pctA = (a.asertAlto / a.total * 100).toFixed(0);
+                            const seg = (pct, cls, label, count) => pct > 0
+                                ? `<div class="${cls}" style="width:${pct}%; min-width:32px;" title="${label}: ${count} proyecto${count === 1 ? '' : 's'} (${pct}%)">${pct}%</div>`
+                                : '';
+                            return `<div class="asesor-bar-block">
+                                <div class="bar-caption">Asertividad (${a.total})</div>
+                                <div class="balance-bar bar-asert">
+                                    ${seg(pctS, 'bar-asert-sin', 'Sin cambios', asertSin)}
+                                    ${seg(pctB, 'bar-asert-bajo', 'Bajo 0-14d', a.asertBajo)}
+                                    ${seg(pctM, 'bar-asert-medio', 'Medio 15-30d', a.asertMedio)}
+                                    ${seg(pctA, 'bar-asert-alto', 'Alto >30d', a.asertAlto)}
+                                </div>
+                            </div>`;
+                        })()}
+                    </div>
+                </div>
+                <div class="asesor-detail">
+                    <table class="asesor-detail-table">
+                        <thead><tr>
+                            <th>Proyecto</th>
+                            <th style="text-align:right">Importe</th>
+                            <th style="text-align:center">Inic.</th>
+                            <th style="text-align:center">CECO</th>
+                            <th style="text-align:center" title="Días entre cierre de venta e inicio del proyecto">Lag venta</th>
+                            <th style="text-align:center">Camb.</th>
+                            <th style="text-align:center" title="Dias al 1er cambio">1er camb.</th>
+                            <th style="text-align:center">Fecha inicio</th>
+                            <th style="text-align:center" title="Dias movidos">Dias mov.</th>
+                            <th style="text-align:center" title="Dias desde/para inicio">Dias inicio</th>
+                            <th title="Riesgo de asertividad">Asertividad</th>
+                            <th title="Matriz de riesgo">Matriz</th>
+                        </tr></thead>
+                        <tbody>${detailRows}</tbody>
+                    </table>
+                </div>
+            </div>`;
+        }).join('');
+
+        document.getElementById('asesores-unified').innerHTML = html || '<div style="padding:20px;text-align:center;color:#556778">No hay asesores con riesgo o cambios en esta seleccion</div>';
+    }
+
+    function renderCharts(fd) {
+        const baseData = zonaFilter.size > 0 ? allData.filter(d => zonaFilter.has(d.zona)) : allData;
+
+        // === DONUT: Distribucion de importe por riesgo ===
+        const canvas = document.getElementById('chart-donut');
+        const ctx = canvas.getContext('2d');
+        const impAlto = sumImporte(fd.filter(d => d.riesgo === 'Alto'));
+        const impMedio = sumImporte(fd.filter(d => d.riesgo === 'Medio'));
+        const impNulo = sumImporte(fd.filter(d => d.riesgo === 'Nulo'));
+        const impTotal = impAlto + impMedio + impNulo || 1;
+
+        const slices = [
+            { val: impAlto, color: '#c44e4e', label: 'Alto' },
+            { val: impMedio, color: '#c48a4a', label: 'Medio' },
+            { val: impNulo, color: '#4a9982', label: 'Sin Riesgo' }
+        ];
+
+        ctx.clearRect(0, 0, 220, 220);
+        const cx = 110, cy = 110, r = 100, inner = 65;
+        let startAngle = -Math.PI / 2;
+        slices.forEach(s => {
+            const sweep = (s.val / impTotal) * Math.PI * 2;
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, startAngle, startAngle + sweep);
+            ctx.arc(cx, cy, inner, startAngle + sweep, startAngle, true);
+            ctx.closePath();
+            ctx.fillStyle = s.color;
+            ctx.fill();
+            startAngle += sweep;
+        });
+
+        document.getElementById('donut-legend').innerHTML = slices.map(s =>
+            `<span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${s.color};margin-right:3px;"></span>${s.label}: ${fmtMoney(s.val)}</span>`
+        ).join('');
+
+        // === BARRAS POR ZONA ===
+        const zonas = {};
+        fd.forEach(d => {
+            if (!zonas[d.zona]) zonas[d.zona] = { total: 0, impTotal: 0, impRiesgo: 0 };
+            zonas[d.zona].total++;
+            zonas[d.zona].impTotal += d.importe;
+            if (d.riesgo === 'Alto' || d.riesgo === 'Medio') zonas[d.zona].impRiesgo += d.importe;
+        });
+        const zonaSorted = Object.entries(zonas).sort((a, b) => b[1].impTotal - a[1].impTotal);
+        const maxImp = zonaSorted.length > 0 ? zonaSorted[0][1].impTotal : 1;
+
+        // Add "Todas" as first entry
+        const totalImpAll = zonaSorted.reduce((s, [,v]) => s + v.impRiesgo, 0);
+        const totalImpTotal = zonaSorted.reduce((s, [,v]) => s + v.impTotal, 0);
+        const allZonas = [['TODAS', { total: fd.length, impTotal: totalImpTotal, impRiesgo: totalImpAll }], ...zonaSorted];
+        const maxRiesgo = allZonas.reduce((m, [,v]) => Math.max(m, v.impRiesgo), 1);
+
+        document.getElementById('chart-zonas').innerHTML = allZonas.map(([z, v]) => {
+            const pctRiesgo = v.impTotal > 0 ? (v.impRiesgo / v.impTotal * 100).toFixed(0) : 0;
+            const wBar = v.impRiesgo > 0 ? Math.max((v.impRiesgo / maxRiesgo * 100), 3).toFixed(0) : 0;
+            const isAll = z === 'TODAS';
+            const clickAction = isAll ? "filterZona(null)" : `filterZona('${z}')`;
+            return `<div style="margin-bottom:8px;cursor:pointer;padding:4px 6px;border-radius:6px;transition:background 0.2s;${isAll ? 'border-bottom:1px solid #2d4a5e;padding-bottom:10px;margin-bottom:10px;' : ''}" onmouseover="this.style.background='rgba(91,155,213,0.08)'" onmouseout="this.style.background='transparent'" onclick="${clickAction}">
+                <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px;">
+                    <span style="color:${isAll ? '#7fb4dc' : '#e0e6ed'};font-weight:600;">${z}</span>
+                    <span style="color:#7a8fa6;">${fmtMoney(v.impTotal)} · <span style="color:${pctRiesgo > 15 ? '#c44e4e' : pctRiesgo > 10 ? '#c48a4a' : '#4a9982'}">${pctRiesgo}% riesgo</span></span>
+                </div>
+                <div style="height:14px;border-radius:7px;overflow:hidden;width:${wBar}%;background:linear-gradient(90deg,#b91c1c,#92400e);min-width:${v.impRiesgo > 0 ? '4px' : '0'};">
+                </div>
+            </div>`;
+        }).join('');
+
+        // === TREEMAP: Bloques proporcionales por riesgo ===
+        const treemapData = [
+            { label: 'Alto', val: impAlto, color: '#b91c1c', filterKey: 'Alto' },
+            { label: 'Medio', val: impMedio, color: '#92400e', filterKey: 'Medio' },
+            { label: 'Sin Riesgo', val: impNulo, color: '#047857', filterKey: 'Nulo' }
+        ].filter(d => d.val > 0);
+
+        document.getElementById('chart-treemap').innerHTML = treemapData.map(d => {
+            const pct = (d.val / impTotal * 100).toFixed(1);
+            const filterVal = d.filterKey;
+            return `<div style="width:${pct}%;background:${d.color};border-radius:4px;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:80px;padding:6px 12px;opacity:0.85;transition:all 0.2s;cursor:pointer;" onmouseover="this.style.opacity=1;this.style.transform='scaleY(1.05)'" onmouseout="this.style.opacity=0.85;this.style.transform='scaleY(1)'" onclick="filterKpi('${filterVal}')">
+                <div style="font-size:14px;font-weight:700;color:#fff;white-space:nowrap;">${fmtMoney(d.val)}</div>
+                <div style="font-size:10px;color:rgba(255,255,255,0.8);white-space:nowrap;">${d.label} · ${pct}%</div>
+            </div>`;
+        }).join('');
+    }
+
+    function filterByAsesor(name) {
+        if (asesorFilter === name) {
+            asesorFilter = null;
+        } else {
+            asesorFilter = name;
+        }
+        projectFilter = null; // reset project filter al cambiar de asesor
+        renderDashboard();
+    }
+
+    function filterByProyecto(id) {
+        if (projectFilter === id) {
+            projectFilter = null;
+        } else {
+            projectFilter = id;
+        }
+        renderDashboard();
+    }
+
+    function renderProyectos(fd) {
+        const today = new Date();
+        today.setHours(0,0,0,0);
+
+        // Apply asesor filter
+        let data = asesorFilter ? fd.filter(d => d.propietario === asesorFilter) : fd;
+
+        // Apply project filter (clic desde la tabla expandible del asesor)
+        if (projectFilter) {
+            data = data.filter(d => d.id === projectFilter);
+        }
+
+        // Sort: riesgo first by importe desc, then sanos by importe desc
+        const conRiesgo = data.filter(d => d.riesgo === 'Alto' || d.riesgo === 'Medio').sort((a,b) => b.importe - a.importe);
+        const sinRiesgo = data.filter(d => d.riesgo === 'Nulo').sort((a,b) => b.importe - a.importe);
+        const sorted = [...conRiesgo, ...sinRiesgo];
+
+        // Benchmarks de Lag Venta→Inicio · calculados una vez sobre allData (no sobre fd, para que sean estables ante filtros)
+        const benchPool = allData.filter(d => d.diasVentaInicio != null);
+        const zonaSums = {}, asesorSums = {};
+        let globalSum = 0, globalN = 0;
+        benchPool.forEach(d => {
+            globalSum += d.diasVentaInicio; globalN++;
+            if (d.zona) { zonaSums[d.zona] = zonaSums[d.zona] || { s: 0, n: 0 }; zonaSums[d.zona].s += d.diasVentaInicio; zonaSums[d.zona].n++; }
+            if (d.propietario) { asesorSums[d.propietario] = asesorSums[d.propietario] || { s: 0, n: 0 }; asesorSums[d.propietario].s += d.diasVentaInicio; asesorSums[d.propietario].n++; }
+        });
+        const lagBench = {
+            zona: z => zonaSums[z] && zonaSums[z].n > 0 ? zonaSums[z].s / zonaSums[z].n : 0,
+            asesor: a => asesorSums[a] && asesorSums[a].n > 0 ? asesorSums[a].s / asesorSums[a].n : 0,
+            global: globalN > 0 ? globalSum / globalN : 0
+        };
+
+        // Update title
+        const titleEl = document.querySelector('.panel-right .section-title');
+        if (titleEl) {
+            titleEl.innerHTML = asesorFilter
+                ? `Salud Comercial por Proyecto <span style="color:#5b9bd5;font-size:10px;">— ${asesorFilter} <span style="cursor:pointer;color:#c44e4e;" onclick="filterByAsesor('${asesorFilter.replace(/'/g, "\\'")}')">✕</span></span>`
+                : 'Salud Comercial por Proyecto';
+        }
+
+        const htmlArr = sorted.map((d, idx) => {
+            const photoUrl = d.propietarioEmail ? `https://tecmx.sharepoint.com/_layouts/15/userphoto.aspx?accountname=${encodeURIComponent(d.propietarioEmail)}&size=S` : '';
+            const photoHtml = photoUrl ? `<img class="asesor-photo" src="${photoUrl}" onerror="this.style.display='none'">` : '<div class="asesor-photo"></div>';
+
+            const riesgoClass = riesgoMatrizClass(d.riesgo);
+            const empresaName = d.nombrePrincipal && d.nombrePrincipal.length > 32 ? d.nombrePrincipal.substring(0, 32) + '…' : (d.nombrePrincipal || '');
+            const oportName = d.nombreOportunidad && d.nombreOportunidad.length > 48 ? d.nombreOportunidad.substring(0, 48) + '…' : (d.nombreOportunidad || '');
+
+            const cecoChipHtml = d.tieneCECO === 'Si'
+                ? '<span class="v5-chip" style="color:#4a9982; border-color:#4a9982;">✓ Si</span>'
+                : '<span class="v5-chip" style="color:#c44e4e; border-color:#c44e4e;">✗ No</span>';
+
+            const estChip = estadoChip(d, today);
+            const raPill = asertividadPill(d.riesgoAsertividad);
+
+            return `<div class="v5-card ${riesgoClass}" id="proy-${idx}">
+                <div class="v5-header">
+                    ${photoHtml}
+                    <div>
+                        <div class="v5-id-name"><a href="https://micrmtec.lightning.force.com/lightning/r/Opportunity/${encodeURIComponent(d.id || '')}/view" target="_blank" rel="noopener noreferrer" style="text-decoration:none;" title="${escapeHtml(d.nombrePrincipal || '')}">${escapeHtml(empresaName)}</a></div>
+                        <div class="v5-id-opp" title="${escapeHtml(d.nombreOportunidad || '')}">${escapeHtml(oportName)}</div>
+                        <div class="v5-id-sub">${escapeHtml(d.propietario || '')} · ${escapeHtml(d.zona || '')}</div>
+                    </div>
+                    <div class="v5-kpi-col"><div class="v5-kpi-label">Importe</div><div class="v5-money">${fmtMoneyCompact(d.importe)}</div></div>
+                    <div class="v5-kpi-col"><div class="v5-kpi-label">CECO</div><div>${cecoChipHtml}</div></div>
+                    <div class="v5-kpi-col"><div class="v5-kpi-label">Estado</div><div>${estChip}</div></div>
+                    <div class="v5-kpi-col"><div class="v5-kpi-label">Riesgo Asertividad</div><div>${raPill}</div></div>
+                </div>
+                <div class="v5-body">
+                    ${buildTimeline(d, today)}
+                    ${buildMovementBar(d)}
+                    ${buildLagCompare(d, lagBench)}
+                </div>
+            </div>`;
+        });
+
+        const riesgoHtml = conRiesgo.length > 0
+            ? `<div style="padding:8px 14px;font-size:11px;font-weight:600;color:#c44e4e;text-transform:uppercase;background:rgba(196,78,78,0.05);border:1px solid #2d4a5e;border-radius:6px;margin-bottom:6px;">En Riesgo (${conRiesgo.length})</div>` + htmlArr.slice(0, conRiesgo.length).join('')
+            : '';
+        const sanoHtml = sinRiesgo.length > 0
+            ? `<div style="padding:8px 14px;font-size:11px;font-weight:600;color:#4a9982;text-transform:uppercase;background:rgba(74,153,130,0.05);border:1px solid #2d4a5e;border-radius:6px;margin-bottom:6px;margin-top:10px;">Sin Riesgo (${sinRiesgo.length})</div>` + htmlArr.slice(conRiesgo.length).join('')
+            : '';
+
+        document.getElementById('proyectos-unified').innerHTML = (riesgoHtml + sanoHtml) || '<div style="padding:20px;text-align:center;color:#556778">No hay proyectos en esta seleccion</div>';
+    }
+
+    let kpiFilter = null; // 'Alto', 'Medio', 'Nulo', 'ConCambios'
+
+    function clearAllSelections() {
+        matrixFilter = null;
+        asertFilter = null;
+        kpiFilter = null;
+        currentFilter = 'Todos';
+        document.querySelectorAll('.matrix-cell').forEach(c => c.classList.remove('selected'));
+        document.querySelectorAll('.kpi-row-asert .kpi-card').forEach(c => c.classList.remove('selected-card'));
+        document.querySelectorAll('.kpi-row .kpi-card').forEach(c => c.classList.remove('selected-card'));
+        document.querySelectorAll('.filter-btn').forEach(b => {
+            b.classList.remove('active', 'active-red', 'active-yellow', 'active-green');
+        });
+        const firstBtn = document.querySelector('.filter-btn');
+        if (firstBtn) firstBtn.classList.add('active');
+    }
+
+    function filterKpi(tipo) {
+        if (kpiFilter === tipo) {
+            clearAllSelections();
+        } else {
+            clearAllSelections();
+            kpiFilter = tipo;
+            event.currentTarget.classList.add('selected-card');
+        }
+        renderDashboard();
+    }
+
+    function filterMatrix(iniciado, ceco) {
+        if (matrixFilter && matrixFilter.iniciado === iniciado && matrixFilter.ceco === ceco) {
+            clearAllSelections();
+        } else {
+            clearAllSelections();
+            matrixFilter = { iniciado, ceco };
+            event.currentTarget.classList.add('selected');
+        }
+        renderDashboard();
+    }
+
+    function filterAsertividad(nivel) {
+        if (asertFilter === nivel) {
+            clearAllSelections();
+        } else {
+            clearAllSelections();
+            asertFilter = nivel;
+            event.currentTarget.classList.add('selected-card');
+        }
+        renderDashboard();
+    }
+
+    function filterTable(filter) {
+        clearAllSelections();
+        currentFilter = filter;
+        const cls = filter === 'Alto' ? 'active-red' : filter === 'Medio' ? 'active-yellow' : 'active';
+        event.target.classList.add(cls);
+        renderDashboard();
+    }
+
+    function getFilteredData() {
+        // Zona y asesor son filtros base, siempre se aplican
+        let data = zonaFilter.size > 0 ? allData.filter(d => zonaFilter.has(d.zona)) : allData;
+        if (asesorFilter) data = data.filter(d => d.propietario === asesorFilter);
+        // Luego el filtro secundario
+        if (kpiFilter) {
+            if (kpiFilter === 'ConCambios') data = data.filter(d => d.cambiosInicio > 0);
+            else if (kpiFilter === 'Todos') { /* no filter */ }
+            else data = data.filter(d => d.riesgo === kpiFilter);
+        } else if (matrixFilter) {
+            data = data.filter(d => d.iniciado === matrixFilter.iniciado && d.tieneCECO === matrixFilter.ceco);
+        } else if (asertFilter) {
+            data = data.filter(d => d.riesgoAsertividad.startsWith(asertFilter));
+        } else if (currentFilter === 'Alto') {
+            data = data.filter(d => d.riesgo === 'Alto');
+        } else if (currentFilter === 'Medio') {
+            data = data.filter(d => d.riesgo === 'Medio');
+        } else if (currentFilter === 'ConCambios') {
+            data = data.filter(d => d.cambiosInicio > 0);
+        }
+        // Filtros por categoría de días (se combinan con cualquier otro filtro)
+        if (lagBucket) {
+            data = data.filter(d => bucketMatches(d.diasVentaInicio, lagBucket));
+        }
+        if (movBucket) {
+            data = data.filter(d => bucketMatches(d.diasInicio, movBucket));
+        }
+        if (countBucket) {
+            data = data.filter(d => countMatches(d.cambiosInicio, countBucket));
+        }
+        return data;
+    }
+
+    loadData();
+    </script>
+</body>
+</html>
