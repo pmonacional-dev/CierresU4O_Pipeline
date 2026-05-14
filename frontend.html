@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CierresU4O Pipeline</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #0d1117;
+      --surface:     #161b22;
+      --surface2:    #21262d;
+      --border:      #30363d;
+      --accent:      #388bfd;
+      --accent-dim:  #1f4287;
+      --success:     #3fb950;
+      --error:       #f85149;
+      --warning:     #d29922;
+      --text:        #e6edf3;
+      --text-muted:  #8b949e;
+      --console-bg:  #010409;
+      --radius:      8px;
+      --font:        'Segoe UI', system-ui, sans-serif;
+      --mono:        'Cascadia Code', 'Consolas', monospace;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 18px 32px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .header-logo {
+      width: 38px; height: 38px;
+      background: var(--accent-dim);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; font-weight: 700; color: var(--accent);
+      flex-shrink: 0;
+    }
+    .header-text h1 { font-size: 18px; font-weight: 600; letter-spacing: 0.3px; }
+    .header-text p  { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+    /* ── Main layout ── */
+    main {
+      flex: 1;
+      padding: 28px 32px;
+      max-width: 960px;
+      width: 100%;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    /* ── Panel card ── */
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .panel-header {
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .panel-header h2 {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+    }
+    .panel-body { padding: 24px; }
+
+    /* ── Form grid ── */
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    @media (max-width: 620px) { .form-grid { grid-template-columns: 1fr; } }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .field label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .field .hint {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    select, input[type="text"], input[type="date"] {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 14px;
+      padding: 9px 12px;
+      width: 100%;
+      transition: border-color 0.15s;
+      outline: none;
+    }
+    select:focus, input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(56,139,253,0.15);
+    }
+    select:disabled, input:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+    select option { background: var(--surface2); }
+
+    /* ── Submit area ── */
+    .submit-row {
+      margin-top: 28px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .btn-iniciar {
+      background: var(--accent);
+      border: none;
+      border-radius: 6px;
+      color: #fff;
+      cursor: pointer;
+      font-family: var(--font);
+      font-size: 14px;
+      font-weight: 600;
+      padding: 10px 28px;
+      transition: background 0.15s, opacity 0.15s, transform 0.1s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+    }
+    .btn-iniciar:hover:not(:disabled) { background: #1a7bdf; }
+    .btn-iniciar:active:not(:disabled) { transform: scale(0.97); }
+    .btn-iniciar:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+    .btn-iniciar .icon { font-size: 15px; }
+    #submit-hint {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    /* ── Process cards ── */
+    .process-cards {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .process-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      transition: border-color 0.2s;
+    }
+    .process-card.running  { border-color: var(--accent); }
+    .process-card.done-ok  { border-color: var(--success); }
+    .process-card.done-err { border-color: var(--error); }
+
+    .proc-badge {
+      width: 36px; height: 36px;
+      border-radius: 6px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 700;
+      color: var(--text-muted);
+      flex-shrink: 0;
+      transition: background 0.2s, color 0.2s;
+    }
+    .process-card.running  .proc-badge { background: var(--accent-dim); color: var(--accent); border-color: var(--accent); }
+    .process-card.done-ok  .proc-badge { background: #0d3320; color: var(--success); border-color: var(--success); }
+    .process-card.done-err .proc-badge { background: #3d0a0a; color: var(--error);   border-color: var(--error); }
+
+    .proc-info { flex: 1; }
+    .proc-name  { font-size: 13px; font-weight: 600; }
+    .proc-desc  { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+    .proc-status {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+    .status-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--border);
+      flex-shrink: 0;
+    }
+    .status-dot.running { background: var(--accent); animation: pulse 1.2s infinite; }
+    .status-dot.ok      { background: var(--success); }
+    .status-dot.error   { background: var(--error); }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.3; }
+    }
+
+    /* ── Global status badge ── */
+    .badge {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 20px;
+      letter-spacing: 0.4px;
+    }
+    .badge.running { background: var(--accent-dim); color: var(--accent); }
+    .badge.ok      { background: #0d3320; color: var(--success); }
+    .badge.error   { background: #3d0a0a; color: var(--error); }
+
+    /* ── Console ── */
+    .console-wrap {
+      margin-top: 20px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .console-toolbar {
+      background: var(--surface2);
+      border-bottom: 1px solid var(--border);
+      padding: 8px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .console-toolbar-actions { display: flex; gap: 8px; }
+    .btn-sm {
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-family: var(--font);
+      font-size: 11px;
+      padding: 3px 10px;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .btn-sm:hover { border-color: var(--accent); color: var(--accent); }
+
+    #console {
+      background: var(--console-bg);
+      color: #c9d1d9;
+      font-family: var(--mono);
+      font-size: 12.5px;
+      line-height: 1.6;
+      height: 380px;
+      overflow-y: auto;
+      padding: 12px 16px;
+    }
+    .log-line { display: flex; gap: 10px; }
+    .log-ts {
+      color: #484f58;
+      flex-shrink: 0;
+      user-select: none;
+    }
+    .log-text { word-break: break-all; }
+    .log-line.err  .log-text { color: var(--error); }
+    .log-line.warn .log-text { color: var(--warning); }
+    .log-line.ok   .log-text { color: var(--success); }
+    .log-line.sep  .log-text { color: #484f58; }
+    .log-line.info .log-text { color: var(--accent); }
+
+    /* ── Spinner ── */
+    .spinner {
+      width: 14px; height: 14px;
+      border: 2px solid transparent;
+      border-top-color: currentColor;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: inline-block;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Modo Prueba toggle ── */
+    .dry-run-row {
+      margin-top: 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      cursor: pointer;
+      user-select: none;
+      transition: border-color 0.15s;
+    }
+    .dry-run-row:hover { border-color: var(--warning); }
+    .dry-run-row.active {
+      border-color: var(--warning);
+      background: rgba(210,153,34,0.08);
+    }
+    .dry-run-row input[type="checkbox"] { width: 15px; height: 15px; accent-color: var(--warning); cursor: pointer; }
+    .dry-run-label { font-size: 13px; font-weight: 600; color: var(--text); }
+    .dry-run-desc  { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+    .dry-run-badge {
+      margin-left: auto;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      padding: 2px 8px;
+      border-radius: 20px;
+      background: rgba(210,153,34,0.15);
+      color: var(--warning);
+      border: 1px solid rgba(210,153,34,0.4);
+    }
+    /* banner amarillo cuando dry-run está activo */
+    #dry-run-banner {
+      padding: 8px 14px;
+      border-radius: 6px;
+      background: rgba(210,153,34,0.1);
+      border: 1px solid rgba(210,153,34,0.5);
+      color: var(--warning);
+      font-size: 12px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* ── Utility ── */
+    .hidden { display: none !important; }
+    .divider { height: 1px; background: var(--border); margin: 20px 0; }
+
+    /* ── Summary row ── */
+    #summary-row {
+      margin-top: 16px;
+      padding: 12px 16px;
+      background: var(--surface2);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    #summary-row.ok    { border-color: var(--success); background: #0d3320; }
+    #summary-row.error { border-color: var(--error);   background: #3d0a0a; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-logo">U4</div>
+  <div class="header-text">
+    <h1>CierresU4O Pipeline</h1>
+    <p>Orquestador de procesos de cierre — Unidad 4 Operaciones</p>
+  </div>
+</header>
+
+<main>
+
+  <!-- ── Panel de configuración ── -->
+  <div class="panel" id="panel-config">
+    <div class="panel-header">
+      <h2>Parámetros del Cierre</h2>
+    </div>
+    <div class="panel-body">
+      <div class="form-grid">
+
+        <div class="field">
+          <label for="origen">Origen</label>
+          <select id="origen">
+            <option value="">— seleccionar —</option>
+            <option value="Erik">Erik</option>
+            <option value="Antonio">Antonio</option>
+            <option value="Andrea">Andrea</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="periodo">Periodo</label>
+          <select id="periodo">
+            <option value="">— seleccionar —</option>
+            <option value="Diario">Diario</option>
+            <option value="Semanal" selected>Semanal</option>
+            <option value="Mensual1">Mensual 1</option>
+            <option value="Mensual2">Mensual 2</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="anio_meta">Año Meta</label>
+          <input type="text" id="anio_meta" value="2025-2026" placeholder="ej. 2025-2026" />
+        </div>
+
+        <div class="field">
+          <label for="fechacambio">Fecha de Cambio (tipo de cambio)</label>
+          <input type="date" id="fechacambio" />
+          <span class="hint">Auto-calculado al último viernes</span>
+        </div>
+
+
+      </div>
+
+      <!-- Toggle Modo Prueba -->
+      <label class="dry-run-row" id="dry-run-row" for="dry-run-chk">
+        <input type="checkbox" id="dry-run-chk" onchange="toggleDryRun()" />
+        <div>
+          <div class="dry-run-label">Modo Prueba (Dry-Run)</div>
+          <div class="dry-run-desc">Valida conexiones y lectura de datos sin insertar, actualizar ni eliminar nada</div>
+        </div>
+        <span class="dry-run-badge">PRUEBA</span>
+      </label>
+
+      <div class="submit-row">
+        <button class="btn-iniciar" id="btn-iniciar" disabled onclick="iniciarCierre()">
+          <span class="icon">&#9654;</span>
+          Iniciar Cierre
+        </button>
+        <span id="submit-hint">Completa todos los campos para continuar</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Panel de progreso (oculto hasta iniciar) ── -->
+  <div class="panel hidden" id="panel-progreso">
+    <div class="panel-header">
+      <h2>Progreso del Cierre</h2>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span class="badge hidden" id="badge-dry-run" style="background:rgba(210,153,34,0.15);color:#d29922;border:1px solid rgba(210,153,34,0.4);">MODO PRUEBA</span>
+        <span class="badge running" id="badge-global">
+          <span class="spinner"></span>&nbsp; En ejecución
+        </span>
+      </div>
+    </div>
+    <div class="panel-body">
+
+      <div id="dry-run-banner" class="hidden" style="margin-bottom:16px;">
+        <div id="dry-run-banner-inner" style="padding:9px 14px;border-radius:6px;background:rgba(210,153,34,0.1);border:1px solid rgba(210,153,34,0.5);color:#d29922;font-size:12px;font-weight:500;">
+          ⚠&nbsp; <strong>Modo Prueba activo</strong> — conexiones y lecturas normales &nbsp;·&nbsp; escrituras a BD y Salesforce bloqueadas
+        </div>
+      </div>
+
+      <div class="process-cards">
+        <div class="process-card" id="card-proceso01">
+          <div class="proc-badge">P01</div>
+          <div class="proc-info">
+            <div class="proc-name">Proceso 01</div>
+            <div class="proc-desc">Extracción y Centralización ETL</div>
+          </div>
+          <div class="proc-status" id="stat-proceso01">
+            <span class="status-dot"></span><span class="stat-label">Pendiente</span>
+          </div>
+        </div>
+
+        <div class="process-card" id="card-proceso02">
+          <div class="proc-badge">P02</div>
+          <div class="proc-info">
+            <div class="proc-name">Proceso 02</div>
+            <div class="proc-desc">Inserción, Actualización y Exportación CRM</div>
+          </div>
+          <div class="proc-status" id="stat-proceso02">
+            <span class="status-dot"></span><span class="stat-label">Pendiente</span>
+          </div>
+        </div>
+
+        <div class="process-card" id="card-proceso03">
+          <div class="proc-badge">P03</div>
+          <div class="proc-info">
+            <div class="proc-name">Proceso 03</div>
+            <div class="proc-desc">Exportación Formato Universal</div>
+          </div>
+          <div class="proc-status" id="stat-proceso03">
+            <span class="status-dot"></span><span class="stat-label">Pendiente</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Consola -->
+      <div class="console-wrap">
+        <div class="console-toolbar">
+          <span>Consola de salida</span>
+          <div class="console-toolbar-actions">
+            <button class="btn-sm" onclick="toggleScroll()">Auto-scroll: <span id="scroll-label">ON</span></button>
+            <button class="btn-sm" onclick="clearConsole()">Limpiar</button>
+          </div>
+        </div>
+        <div id="console"></div>
+      </div>
+
+      <!-- Resumen final -->
+      <div id="summary-row" class="hidden">
+        <span id="summary-icon"></span>
+        <span id="summary-text"></span>
+      </div>
+
+    </div>
+  </div>
+
+</main>
+
+<script>
+  // ── Modo Prueba toggle ──────────────────────────────────────────────────
+
+  function toggleDryRun() {
+    const on = document.getElementById('dry-run-chk').checked;
+    document.getElementById('dry-run-row').classList.toggle('active', on);
+    const hint = document.getElementById('submit-hint');
+    if (on && document.getElementById('btn-iniciar').disabled === false) {
+      hint.textContent = 'Modo Prueba activo — no se escribirá nada en BD';
+    }
+  }
+
+  // ── Inicialización ──────────────────────────────────────────────────────
+
+  let autoScroll = true;
+
+  function getLastFriday() {
+    const today = new Date();
+    // JS: 0=Dom,1=Lun,...,5=Vie,6=Sáb → Python weekday: (JS+6)%7
+    const pyDay = (today.getDay() + 6) % 7;
+    const daysBack = ((pyDay - 4) + 7) % 7;
+    const d = new Date(today);
+    d.setDate(today.getDate() - daysBack);
+    return d.toISOString().split('T')[0];
+  }
+
+  document.getElementById('fechacambio').value = getLastFriday();
+
+  // ── Validación del formulario ───────────────────────────────────────────
+
+  const fields = ['origen', 'periodo', 'anio_meta', 'fechacambio'];
+
+  fields.forEach(id => {
+    document.getElementById(id).addEventListener('input', validate);
+    document.getElementById(id).addEventListener('change', validate);
+  });
+
+  function validate() {
+    const ok = fields.every(id => document.getElementById(id).value.trim() !== '');
+    const btn = document.getElementById('btn-iniciar');
+    const hint = document.getElementById('submit-hint');
+    btn.disabled = !ok;
+    hint.textContent = ok
+      ? 'Todos los campos completos — listo para iniciar'
+      : 'Completa todos los campos para continuar';
+  }
+
+  validate();
+
+  // ── Iniciar cierre ──────────────────────────────────────────────────────
+
+  async function iniciarCierre() {
+    const dryRun = document.getElementById('dry-run-chk').checked;
+    const payload = {
+      origen:      document.getElementById('origen').value,
+      periodo:     document.getElementById('periodo').value,
+      anio_meta:   document.getElementById('anio_meta').value.trim(),
+      fechacambio: document.getElementById('fechacambio').value,
+      procesos:    ['proceso01', 'proceso02', 'proceso03'],
+      dry_run:     dryRun,
+    };
+
+    // Mostrar banner de modo prueba si aplica
+    if (dryRun) {
+      document.getElementById('dry-run-banner').classList.remove('hidden');
+      document.getElementById('badge-dry-run').classList.remove('hidden');
+    }
+
+    // Bloquear formulario
+    fields.forEach(id => document.getElementById(id).disabled = true);
+    document.getElementById('dry-run-chk').disabled = true;
+    document.getElementById('btn-iniciar').disabled = true;
+    document.getElementById('submit-hint').textContent =
+      `Cierre en curso — ${payload.origen} / ${payload.periodo} / ${payload.anio_meta}`;
+
+    // Mostrar panel de progreso
+    document.getElementById('panel-progreso').classList.remove('hidden');
+    document.getElementById('panel-progreso').scrollIntoView({ behavior: 'smooth' });
+
+    appendLog(`Iniciando cierre: origen=${payload.origen}  periodo=${payload.periodo}  anio_meta=${payload.anio_meta}  fechacambio=${payload.fechacambio}`, 'info');
+    appendLog('─'.repeat(70), 'sep');
+
+    try {
+      const res = await fetch('/iniciar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const { job_id } = await res.json();
+      connectStream(job_id);
+    } catch (err) {
+      appendLog(`Error al conectar con el servidor: ${err}`, 'err');
+      finishPipeline('error');
+    }
+  }
+
+  // ── SSE streaming ───────────────────────────────────────────────────────
+
+  function connectStream(jobId) {
+    const es = new EventSource(`/stream/${jobId}`);
+
+    es.onmessage = (e) => {
+      let msg;
+      try { msg = JSON.parse(e.data); } catch { return; }
+
+      switch (msg.type) {
+        case 'heartbeat': break;
+
+        case 'proceso_start':
+          setProcesoStatus(msg.proceso, 'running', 'Ejecutando...');
+          appendLog('─'.repeat(70), 'sep');
+          appendLog(`▶  ${msg.nombre}`, 'info');
+          break;
+
+        case 'log': {
+          const t = msg.text || '';
+          let cls = 'default';
+          if (/error|exception|traceback|failed/i.test(t)) cls = 'err';
+          else if (/warning|warn/i.test(t)) cls = 'warn';
+          else if (/ok|completado|success|done|listo/i.test(t)) cls = 'ok';
+          else if (/^={3,}/.test(t) || /^-{3,}/.test(t)) cls = 'sep';
+          appendLog(t, cls);
+          break;
+        }
+
+        case 'proceso_end':
+          if (msg.status === 'ok') {
+            setProcesoStatus(msg.proceso, 'ok', 'Completado');
+            appendLog(`✔  Proceso finalizado correctamente`, 'ok');
+          } else {
+            setProcesoStatus(msg.proceso, 'error', 'Error');
+            appendLog(`✖  Proceso terminó con error (código ${msg.returncode ?? '?'})`, 'err');
+          }
+          break;
+
+        case 'done':
+          es.close();
+          finishPipeline(msg.status, msg.duracion);
+          break;
+      }
+    };
+
+    es.onerror = () => {
+      appendLog('Conexión con el servidor interrumpida.', 'err');
+      es.close();
+      finishPipeline('error');
+    };
+  }
+
+  // ── UI helpers ──────────────────────────────────────────────────────────
+
+  function setProcesoStatus(proceso, state, label) {
+    const card = document.getElementById(`card-${proceso}`);
+    const stat = document.getElementById(`stat-${proceso}`);
+    if (!card || !stat) return;
+    card.className = `process-card ${state === 'running' ? 'running' : state === 'ok' ? 'done-ok' : 'done-err'}`;
+    const dot = stat.querySelector('.status-dot');
+    const lbl = stat.querySelector('.stat-label');
+    dot.className = `status-dot ${state}`;
+    lbl.textContent = label;
+  }
+
+  function finishPipeline(status, duracion) {
+    const badge = document.getElementById('badge-global');
+    const summaryRow = document.getElementById('summary-row');
+    const summaryIcon = document.getElementById('summary-icon');
+    const summaryText = document.getElementById('summary-text');
+
+    if (status === 'ok') {
+      badge.className = 'badge ok';
+      badge.innerHTML = '&#10003; Completado';
+      summaryRow.className = 'ok';
+      summaryIcon.textContent = '✔';
+      summaryText.textContent = `Pipeline completado exitosamente${duracion ? ' — Duración: ' + duracion : ''}.`;
+      appendLog('─'.repeat(70), 'sep');
+      appendLog(`✔  CierresU4O completado${duracion ? ' en ' + duracion : ''}`, 'ok');
+    } else {
+      badge.className = 'badge error';
+      badge.innerHTML = '&#10007; Error';
+      summaryRow.className = 'error';
+      summaryIcon.textContent = '✖';
+      summaryText.textContent = 'El pipeline terminó con errores. Revisa la consola para más detalles.';
+      appendLog('─'.repeat(70), 'sep');
+      appendLog('✖  El pipeline terminó con errores.', 'err');
+    }
+
+    summaryRow.classList.remove('hidden');
+
+    // Rehabilitar formulario
+    fields.forEach(id => document.getElementById(id).disabled = false);
+    document.getElementById('dry-run-chk').disabled = false;
+    const btn = document.getElementById('btn-iniciar');
+    btn.disabled = false;
+    document.getElementById('submit-hint').textContent =
+      'Puedes modificar los parámetros y volver a iniciar';
+  }
+
+  function appendLog(text, cls = 'default') {
+    const console_ = document.getElementById('console');
+    const now = new Date();
+    const ts = now.toTimeString().slice(0, 8);
+    const line = document.createElement('div');
+    line.className = `log-line ${cls}`;
+    line.innerHTML =
+      `<span class="log-ts">${ts}</span>` +
+      `<span class="log-text">${escHtml(text)}</span>`;
+    console_.appendChild(line);
+    if (autoScroll) console_.scrollTop = console_.scrollHeight;
+  }
+
+  function clearConsole() {
+    document.getElementById('console').innerHTML = '';
+  }
+
+  function toggleScroll() {
+    autoScroll = !autoScroll;
+    document.getElementById('scroll-label').textContent = autoScroll ? 'ON' : 'OFF';
+  }
+
+  function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+</script>
+
+</body>
+</html>

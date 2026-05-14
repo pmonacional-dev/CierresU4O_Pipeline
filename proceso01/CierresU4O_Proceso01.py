@@ -46,18 +46,31 @@ def start_db_parallel(databases):
     return results
 
 
-def main():
+def main(origen=None, periodo=None, fechacambio=None):
+    import os
+    if os.getenv("U4O_DRY_RUN", "0") == "1":
+        import dryrun  # noqa: F401 — activa el modo prueba antes de cualquier conexión
+    if origen is None:
+        origen = os.getenv("U4O_ORIGEN", "Erik")
+    if periodo is None:
+        periodo = os.getenv("U4O_PERIODO", "Semanal")
+    if fechacambio is None:
+        fechacambio = os.getenv("U4O_FECHACAMBIO", get_last_friday_date(datetime.now()).strftime("%Y-%m-%d"))
+
     start_time = datetime.now()
     print("Iniciando proceso...")
     logging.info('CierresU4O_Proceso01 | Inicia ejecución')
-    
+
     databases = ["INTELIGENCIA", "PASE", "QLIK"]
     results = start_db_parallel(databases)
-    
+
     if all(results.values()):
         print("Bases de datos en SaaS detectadas correctamente")
-        
-        response = input("¿Desea continuar con el proceso de cierre? (yes/no): ").lower()
+
+        if os.getenv("U4O_AUTO_CONFIRM", "0") == "1":
+            response = "yes"
+        else:
+            response = input("¿Desea continuar con el proceso de cierre? (yes/no): ").lower()
         if response in ["yes", "y", "si", "sí", "s"]:
             print("Continuando el proceso de cierre...")
             
@@ -106,9 +119,8 @@ def main():
 
 
 if __name__ == "__main__":
-    # Definir los valores de variables para usuario que lo ejecuta (origen) y periodo de cierre
-    origen = "Erik"  # "Erik" or "Antonio" depending on the requirement
-    periodo = "Semanal"  # "Diario", "Semanal", "Mensual1", "Mensual2" dependiendo del día del cierre o el seguimiento al cierre mensual para limpieza PASE
-    fechacambio = get_last_friday_date(datetime.now()).strftime(
-        "%Y-%m-%d")  # Obtener la fecha del último viernes de la semana anterior para trazabilidad el tipo de cambio semanal
-    main()
+    import os
+    _origen = os.getenv("U4O_ORIGEN", "Erik")
+    _periodo = os.getenv("U4O_PERIODO", "Semanal")
+    _fechacambio = os.getenv("U4O_FECHACAMBIO", get_last_friday_date(datetime.now()).strftime("%Y-%m-%d"))
+    main(_origen, _periodo, _fechacambio)

@@ -15,9 +15,14 @@ from actualizaWinroom_PBI import main as main_winroom
 from Export_Reporte_TLG import main as main_reporte_tlg
 from ETL_Formato_Universal import main as main_formato_universal
 
-def ejecutar_flujos():
-    origen = "Antonio" # Erik, Antonio o Andrea
-    anio_meta = "2025-2026" # Actualizar con cambio de año
+def ejecutar_flujos(origen=None, anio_meta=None):
+    import os
+    if os.getenv("U4O_DRY_RUN", "0") == "1":
+        import dryrun  # noqa: F401 — activa el modo prueba antes de cualquier conexión
+    if origen is None:
+        origen = os.getenv("U4O_ORIGEN", "Antonio")
+    if anio_meta is None:
+        anio_meta = os.getenv("U4O_ANIO_META", "2025-2026")
     
     print("Iniciando ejecución de flujos...")
 
@@ -46,4 +51,7 @@ def ejecutar_flujos():
     print("Ejecución completa.")
 
 if __name__ == "__main__":
-    ejecutar_flujos()
+    import os
+    _origen = os.getenv("U4O_ORIGEN", "Antonio")
+    _anio_meta = os.getenv("U4O_ANIO_META", "2025-2026")
+    ejecutar_flujos(_origen, _anio_meta)

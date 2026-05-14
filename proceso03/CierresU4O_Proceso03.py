@@ -13,6 +13,8 @@ import pyodbc
 
 
 def ejecutar_flujos(origen: str | None = None):
+    if os.getenv("U4O_DRY_RUN", "0") == "1":
+        import dryrun  # noqa: F401 — activa el modo prueba antes de cualquier conexión
     print("Iniciando ejecución de flujos...")
 
     print("1) import_export")
@@ -21,8 +23,8 @@ def ejecutar_flujos(origen: str | None = None):
     print("Ejecución completa.")
 
 if __name__ == "__main__":
-    
-    origen = "Erik" #Erik o Andrea o Antonio
+    import os
+    origen = os.getenv("U4O_ORIGEN", "Erik")  # Erik, Andrea o Antonio
 
     print("Python exe:", sys.executable)
     print("Python version:", sys.version)
